@@ -32,6 +32,8 @@ export const defaultSettings: Settings = {
   autoPrices: true,
   autoDeals: true,
   loanPlan: { monthlyDraw: 60000, drawYears: 3, availableOverride: null, payDeferralFromSavings: true },
+  city: 'Grenoble',
+  notifications: { budget: true, game: true, weekly: true, deals: true },
 };
 
 /** Icône et flux de bons plans Dealabs de chaque catégorie par défaut. */

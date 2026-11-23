@@ -39,7 +39,7 @@ describe('astuces', () => {
     overBudget: new Set(),
     subscriptions: [{ key: 'X', label: 'X', categoryId: null, amount: 1500, months: 3, lastDate: '', increase: null }, { key: 'Y', label: 'Y', categoryId: null, amount: 500, months: 2, lastDate: '', increase: null }],
     labels: ['FRAIS TENUE DE COMPTE'],
-    states: new Map([['d', { id: 'd', status: 'dismissed', updatedAt: '' }]]),
+    states: new Map([['d', { id: 'd', status: 'dismissed' }]]),
   };
 
   it('ne garde que les astuces pertinentes et estime l’économie', () => {

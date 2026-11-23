@@ -80,11 +80,14 @@ export function SettingsPage() {
               </span>
             </span>
           </label>
+          <Field label="Ma ville (bons plans locaux)" className="mt-4 max-w-xs">
+            <Input value={draft.city} onChange={(e) => set('city', e.target.value)} placeholder="Grenoble" />
+          </Field>
           <label className="mt-4 flex items-start gap-3 text-sm">
             <input type="checkbox" className="mt-1" checked={draft.autoDeals} onChange={(e) => set('autoDeals', e.target.checked)} />
             <span>
-              Afficher les bons plans du moment (Dealabs) dans « Astuces & bons plans »
-              <span className="block text-xs text-slate-500">L'application télécharge des listes publiques de promotions (courses, transports…). Rien n'est envoyé : le choix des catégories se fait sur ton ordinateur.</span>
+              Afficher les bons plans (presse locale, Crous, Dealabs) dans « Astuces & bons plans »
+              <span className="block text-xs text-slate-500">Ton PC télécharge des flux publics (Google Actualités pour la presse locale, Crous, Dealabs). Seuls le nom de la ville et des mots-clés comme « bon plan » sont envoyés, jamais tes données.</span>
             </span>
           </label>
         </Card>

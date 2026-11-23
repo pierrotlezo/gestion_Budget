@@ -26,6 +26,25 @@ import {
   defaultSettings,
 } from './defaults';
 
+/** Liste des tables, utilisée par la sauvegarde JSON et l'effacement des données de démo. */
+export const DATA_TABLES = [
+  'settings',
+  'categories',
+  'transactions',
+  'rules',
+  'csvProfiles',
+  'loans',
+  'savingsAccounts',
+  'savingsMovements',
+  'investments',
+  'investmentOps',
+  'prices',
+  'goals',
+  'scenarios',
+  'tipStates',
+] as const;
+export type DataTable = (typeof DATA_TABLES)[number];
+
 /**
  * Base IndexedDB locale (dans le navigateur). Rien ne sort de la machine.
  *
@@ -101,36 +120,64 @@ export class BudgetDB extends Dexie {
         });
       });
 
-    this.on('populate', (tx) => {
-      tx.table('settings').add(defaultSettings);
-      tx.table('categories').bulkAdd(defaultCategories);
-      tx.table('rules').bulkAdd(defaultRules);
-      tx.table('loans').add(defaultLoan);
-      tx.table('savingsAccounts').bulkAdd(defaultSavingsAccounts);
-      tx.table('scenarios').bulkAdd(defaultScenarios);
+    // Version 4 : synchronisation PC ↔ téléphone (horodatage de chaque enregistrement), ville, notifications
+    this.version(4).upgrade(async (tx) => {
+      const now = Date.now();
+      // Les données existantes sont « plus récentes » que les valeurs par défaut d'un nouvel appareil
+      for (const t of DATA_TABLES) await tx.table(t).toCollection().modify((r) => { if (r.updatedAt === undefined) r.updatedAt = now; });
+      await tx.table('settings').toCollection().modify((s) => {
+        if (!s.city) s.city = defaultSettings.city;
+        if (!s.notifications) s.notifications = { ...defaultSettings.notifications };
+      });
     });
+
+    // Valeurs par défaut : horodatées 0, pour ne jamais écraser les données d'un autre appareil
+    const d = <T extends object>(rows: T[]) => rows.map((r) => ({ ...r, updatedAt: 0 }));
+    this.on('populate', (tx) => {
+      tx.table('settings').add(d([defaultSettings])[0]);
+      tx.table('categories').bulkAdd(d(defaultCategories));
+      tx.table('rules').bulkAdd(d(defaultRules));
+      tx.table('loans').add(d([defaultLoan])[0]);
+      tx.table('savingsAccounts').bulkAdd(d(defaultSavingsAccounts));
+      tx.table('scenarios').bulkAdd(d(defaultScenarios));
+    });
+
+    // Horodatage automatique de chaque création / modification (pour la synchro)
+    for (const t of DATA_TABLES) {
+      this.table(t).hook('creating', (_key, obj: { updatedAt?: number }) => {
+        if (!syncApplying && obj.updatedAt === undefined) obj.updatedAt = Date.now();
+        if (!syncApplying) notifyChange();
+      });
+      this.table(t).hook('updating', () => {
+        if (syncApplying) return undefined;
+        notifyChange();
+        return { updatedAt: Date.now() };
+      });
+      this.table(t).hook('deleting', () => {
+        if (!syncApplying) notifyChange();
+      });
+    }
   }
+}
+
+/** Pendant l'application d'une synchro, on ne ré-horodate pas les données reçues. */
+let syncApplying = false;
+export const setSyncApplying = (v: boolean) => {
+  syncApplying = v;
+};
+
+/** Prévenir la synchro automatique qu'une donnée a changé. */
+const changeListeners = new Set<() => void>();
+export const onLocalChange = (fn: () => void) => {
+  changeListeners.add(fn);
+  return () => changeListeners.delete(fn);
+};
+function notifyChange() {
+  for (const fn of changeListeners) setTimeout(fn, 0);
 }
 
 export const db = new BudgetDB();
 
-/** Liste des tables, utilisée par la sauvegarde JSON et l'effacement des données de démo. */
-export const DATA_TABLES = [
-  'settings',
-  'categories',
-  'transactions',
-  'rules',
-  'csvProfiles',
-  'loans',
-  'savingsAccounts',
-  'savingsMovements',
-  'investments',
-  'investmentOps',
-  'prices',
-  'goals',
-  'scenarios',
-  'tipStates',
-] as const;
-export type DataTable = (typeof DATA_TABLES)[number];
+
 
 export const newId = (): string => crypto.randomUUID();

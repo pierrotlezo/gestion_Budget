@@ -4,9 +4,12 @@ Application web personnelle, en français, pour **visualiser ses dépenses afin 
 
 🔒 **Confidentialité** : tes données ne quittent jamais la machine. Pas de serveur, pas de compte, pas de statistiques d'usage. Les données sont stockées dans le navigateur (IndexedDB), et le serveur local n'écoute que sur `127.0.0.1`.
 
-Deux exceptions, désactivables dans **Réglages** :
+Ton PC sert de **serveur maison** pour le téléphone (voir plus bas) : la synchro se fait directement entre tes appareils, sur ton Wi-Fi.
+
+Quelques échanges avec Internet, tous désactivables dans **Réglages** :
 - **Cours des placements** : seuls les symboles (ex. `CW8.PA`, `bitcoin`) sont envoyés en HTTPS à Yahoo Finance et CoinGecko, sans cookies ni page d'origine. Tes montants et tes quantités ne sont jamais envoyés.
-- **Bons plans du moment** : l'application télécharge des flux publics de promotions Dealabs (courses, transports, forfaits…). Rien n'est envoyé, et le choix des flux se fait sur ton ordinateur.
+- **Bons plans** : le PC télécharge des flux publics : Google Actualités (presse locale), Crous Grenoble, Place Gre'net, Gre-Mag et Dealabs. Seuls le nom de ta ville et des mots-clés comme « bon plan » ou « happy hour » sont envoyés. Le tri se fait sur ton ordinateur.
+- **Notifications** : elles partent de ton PC et passent par le service de notifications d'Apple, **chiffrées de bout en bout** (Apple ne peut pas les lire).
 
 ## Lancer l'application
 
@@ -25,17 +28,52 @@ Pour découvrir l'application, va dans **Réglages → Données & sauvegarde →
 
 | Commande | Rôle |
 |---|---|
+| `npm start` | Construit l'appli et lance le serveur maison (HTTPS, iPhone, synchro, notifications) |
 | `npm test` | Lance les tests unitaires (Vitest) |
 | `npm run test:watch` | Relance les tests à chaque modification |
 | `npm run build` | Vérifie les types et construit une version optimisée dans `dist/` |
 | `npm run preview` | Sert la version construite sur http://127.0.0.1:4173 |
+
+## 📱 Sur l'iPhone (synchro + notifications)
+
+L'appli s'installe sur l'iPhone comme une application, depuis Safari. Ton PC lui sert de serveur : il fournit l'appli, synchronise les données et envoie les notifications.
+
+**1. Lance le serveur maison sur le PC**
+```bash
+npm start
+```
+Il construit l'appli puis l'affiche à l'adresse **https://pierrot-laptop.local:8443** (le nom de ton PC sur le réseau). Laisse-le tourner : **les notifications ne partent que si le PC est allumé avec le serveur lancé.**
+
+**2. Installe l'appli sur l'iPhone** (une seule fois). Sur le PC, ouvre l'appli à l'adresse https://localhost:8443, puis va dans **Réglages → 📱 Téléphone & synchro** et suis les 5 étapes :
+1. Mets l'iPhone sur le même Wi-Fi que le PC (le partage de connexion de l'iPhone marche aussi).
+2. Scanne le 1er QR code : il ouvre la page qui permet de télécharger le **certificat**. Installe-le dans **Réglages → Profil téléchargé**.
+3. Active la confiance dans **Réglages → Général → Informations → Réglages des certificats**. Ce certificat ne sert qu'à sécuriser la connexion entre ton iPhone et ton PC.
+4. Scanne le 2e QR code. Dans Safari, appuie sur **Partager ⬆️ → Sur l'écran d'accueil**.
+5. Ouvre l'appli depuis son icône, entre le **code à 6 chiffres** affiché sur le PC, puis appuie sur **🔔 Activer les notifications**.
+
+**Ensuite :**
+- **La synchro est automatique**, à l'ouverture et après chaque modification, dès que l'iPhone et le PC sont sur le même Wi-Fi.
+- **Hors de chez toi**, l'appli reste utilisable et les notifications arrivent quand même (si le PC est allumé). La synchro se fait au retour.
+- **Si une même donnée est modifiée sur les deux appareils**, c'est la modification la plus récente qui l'emporte.
+- **Notifications possibles**, à choisir dans Réglages → Téléphone :
+  - bons plans du jour à Grenoble ;
+  - budget à 80 % ou dépassé, abonnement qui augmente ;
+  - palier, niveau, rappel de fin de mois pour la série 🔥 ;
+  - résumé du dimanche soir.
+
+  Aucune notification n'est envoyée entre 22 h et 8 h.
+- **Si l'adresse « .local » ne marche pas**, la page indique aussi l'adresse IP du PC.
+- **Si le PC a un pare-feu actif**, il faut autoriser les ports 8443 et 8080 sur le réseau local.
+- **Le dossier `donnees-serveur/`** contient une copie de tes données, les certificats et la clé secrète d'appairage. Il n'est jamais envoyé sur GitHub (`.gitignore`). Garde-le privé et ne le partage pas.
+
+Prérequis : iOS 16.4 ou plus récent pour les notifications.
 
 ## ⚠️ Sauvegarde
 
 Les données vivent dans **ce navigateur, à cette adresse** (`http://127.0.0.1:5173`). Elles disparaissent si tu vides les données de navigation du site, et ne sont pas visibles depuis un autre navigateur ni depuis l'adresse de `npm run preview`.
 → Fais régulièrement **Réglages → Données & sauvegarde → Exporter la sauvegarde** et garde le fichier JSON en lieu sûr.
 
-Les cours automatiques passent par le serveur local de Vite : ils fonctionnent avec `npm run dev` et `npm run preview`, pas en ouvrant directement les fichiers de `dist/`.
+Les cours, les bons plans et la synchro passent par le serveur local. Ils fonctionnent avec `npm start`, `npm run dev` et `npm run preview`, mais pas en ouvrant directement les fichiers de `dist/`. Pour un usage quotidien avec l'iPhone, utilise `npm start`.
 
 ## Premiers pas
 
@@ -125,8 +163,13 @@ src/
 │   ├── invest/                 Placements, cours, intérêts composés, objectifs
 │   ├── tips/                   Astuces, abonnements, bons plans
 │   ├── gamification.ts         Niveaux, XP, badges, séries
+│   ├── progress.ts             Calculs partagés appli / serveur (patrimoine, jeu, astuces)
+│   ├── notifications.ts        Règles des notifications
+│   ├── sync/                   Fusion des données entre appareils
 │   └── netWorth.ts             Comparaison prêt / épargne, patrimoine net
-├── services/     Accès réseau facultatif (cours des placements, bons plans)
+├── services/     Accès réseau (cours, bons plans, synchro, notifications)
+server/           Serveur maison : HTTPS, certificats, API, synchro, envoi des notifications
+public/           Service worker (hors connexion + notifications), manifeste, icônes
 ├── features/     Un dossier par écran (home, transactions, invest, savings, loan…)
 ├── components/   Composants d'interface réutilisables
 └── hooks/        Accès réactif aux données (useLiveQuery)

@@ -13,6 +13,7 @@ import { Button, Card, ColorDot, EmptyState, ProgressBar, Stat } from '../../com
 import { BreakdownBars } from '../../components/BreakdownBars';
 import { useGameProgress, useInsights } from '../../hooks/insights';
 import { TipCard } from '../tips/TipCard';
+import { LocalDeals } from '../tips/LocalDeals';
 import { TransactionForm } from '../transactions/TransactionForm';
 import { SaveDialog } from './SaveDialog';
 
@@ -124,6 +125,8 @@ export function HomePage() {
           <div className="grid gap-4 md:grid-cols-3">{insights.ofTheMonth.map((s) => <TipCard key={s.tip.id} s={s} compact />)}</div>
         </section>
       )}
+
+      <LocalDeals limit={3} compact />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Mes budgets" actions={<Link to="/depenses/reglages" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Modifier</Link>}>

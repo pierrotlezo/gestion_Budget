@@ -47,3 +47,31 @@ describe('migration version 2 → 3', () => {
     db.close();
   });
 });
+
+describe('horodatage pour la synchro (version 4)', () => {
+  it('valeurs par défaut à 0, créations et modifications horodatées', async () => {
+    const db = new BudgetDB('test-stamp');
+    expect((await db.categories.get('cat-alimentation'))?.updatedAt).toBe(0);
+    expect((await db.settings.get('app'))?.updatedAt).toBe(0);
+    const before = Date.now();
+    await db.transactions.add({ id: 't', date: '2026-11-01', amount: -100, label: 'X', categoryId: null, source: 'manual' });
+    expect((await db.transactions.get('t'))!.updatedAt).toBeGreaterThanOrEqual(before);
+    await db.categories.update('cat-alimentation', { monthlyBudget: 30000 });
+    expect((await db.categories.get('cat-alimentation'))!.updatedAt).toBeGreaterThanOrEqual(before);
+    expect((await db.settings.get('app'))?.city).toBe('Grenoble');
+    db.close();
+  });
+
+  it('la migration horodate les données existantes', async () => {
+    const old = new Dexie('test-migration-4');
+    old.version(3).stores({ settings: 'id', categories: 'id, order', transactions: 'id, date, categoryId, importHash', rules: 'id, priority', csvProfiles: 'id', loans: 'id', savingsAccounts: 'id', savingsMovements: 'id, accountId, date', investments: 'id', investmentOps: 'id, investmentId, date', prices: 'id', goals: 'id', scenarios: 'id', tipStates: 'id' });
+    const { city: _c, notifications: _n, ...v3Settings } = defaultSettings;
+    await old.table('settings').add(v3Settings);
+    await old.table('transactions').add({ id: 't', date: '2026-11-01', amount: -100, label: 'X', categoryId: null, source: 'manual' });
+    old.close();
+    const db = new BudgetDB('test-migration-4');
+    expect((await db.transactions.get('t'))!.updatedAt).toBeGreaterThan(0);
+    expect((await db.settings.get('app'))).toMatchObject({ city: 'Grenoble', notifications: { budget: true, deals: true } });
+    db.close();
+  });
+});

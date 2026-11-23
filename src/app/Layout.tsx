@@ -2,6 +2,22 @@ import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { sections, type Section } from './routes';
 import { autoRefreshPrices } from '../services/prices';
+import { useSyncStatus } from '../services/sync';
+
+/** Petit indicateur de synchro avec le PC. */
+function SyncBadge({ compact = false }: { compact?: boolean }) {
+  const s = useSyncStatus();
+  if (!s.token) {
+    return (
+      <NavLink to="/reglages/telephone" className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">
+        {compact ? '🔗 Appairer' : '🔗 Appairer avec le PC'}
+      </NavLink>
+    );
+  }
+  const ago = s.lastResult ? Math.round((Date.now() - s.lastResult.at) / 60000) : null;
+  const label = s.syncing ? '🔄 Synchro…' : s.lastResult?.ok ? `✅ Synchro${ago !== null && ago > 0 ? ` il y a ${ago} min` : ''}` : s.lastResult ? '📴 PC injoignable' : '🔄 En attente';
+  return <NavLink to="/reglages/telephone" className="text-xs text-slate-500 hover:underline" title={s.lastResult?.message}>{label}</NavLink>;
+}
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-3 whitespace-nowrap rounded-xl px-3 py-2.5 text-[15px] transition-colors ${
@@ -32,17 +48,21 @@ export function Layout() {
             </li>
           ))}
         </ul>
-        <p className="mt-auto px-3 text-xs leading-relaxed text-slate-400">🔒 Tes données restent dans ce navigateur.</p>
+        <div className="mt-auto space-y-1 px-3">
+          <SyncBadge />
+          <p className="text-xs leading-relaxed text-slate-400">🔒 Tes données restent chez toi.</p>
+        </div>
       </nav>
 
-      <main className="min-w-0 flex-1 px-4 pt-6 pb-24 md:px-10 md:pt-8 md:pb-10">
+      <main className="min-w-0 flex-1 px-4 pt-[max(1.5rem,env(safe-area-inset-top))] pb-28 md:px-10 md:pt-8 md:pb-10">
         <div className="mx-auto max-w-6xl">
+          <div className="mb-3 flex justify-end md:hidden"><SyncBadge compact /></div>
           <Outlet />
         </div>
       </main>
 
       {/* Barre du bas (mobile) */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95">
         <ul className="grid grid-cols-5">
           {sections.map((s) => (
             <li key={s.path}>

@@ -7,7 +7,7 @@ import { DATA_TABLES, type BudgetDB, type DataTable } from './db';
 import { CATEGORY_EXTRAS, defaultScenarios, defaultSettings } from './defaults';
 
 export const BACKUP_APP = 'gestion-budget';
-export const BACKUP_FORMAT_VERSION = 3;
+export const BACKUP_FORMAT_VERSION = 4;
 
 export interface Backup {
   app: typeof BACKUP_APP;

@@ -9,6 +9,7 @@ import { formatDateFR } from '../../domain/dates';
 import { formatEUR } from '../../domain/money';
 import { Alert, Button, Card, EmptyState, PageHeader } from '../../components/ui';
 import { TipCard } from './TipCard';
+import { LocalDeals } from './LocalDeals';
 
 const FEED_LABELS: Record<string, string> = {
   epicerie: '🛒 Courses', restaurants: '🍽️ Restos', energie: '⚡ Énergie', 'forfaits-mobiles': '📱 Forfaits', telephonie: '📱 Téléphonie',
@@ -61,6 +62,8 @@ export function TipsPage() {
           </div>
         )}
       </Card>
+
+      <LocalDeals />
 
       {settings.autoDeals ? (insights.ready && <Deals feeds={insights.feeds} />) : (
         <Alert tone="info">Les bons plans du moment sont désactivés (Réglages → Paramètres).</Alert>
@@ -118,7 +121,7 @@ function Deals({ feeds }: { feeds: string[] }) {
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">🔥 Bons plans du moment</h2>
+        <h2 className="text-lg font-semibold">🛒 Promos en magasin et en ligne</h2>
         <span className="text-xs text-slate-500">Pour tes plus grosses dépenses : {feeds.map((f) => FEED_LABELS[f] ?? f).join(' · ')} · source Dealabs</span>
       </div>
       {error ? <Alert tone="warning">{error}</Alert> : !deals ? <p className="text-sm text-slate-500">Chargement…</p> : (

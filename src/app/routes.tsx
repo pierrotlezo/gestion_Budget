@@ -16,6 +16,7 @@ import { LoanPage } from '../features/loan/LoanPage';
 import { LoanVsSavingsPage } from '../features/loan/LoanVsSavingsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { DataPage } from '../features/data/DataPage';
+import { PhonePage } from '../features/settings/PhonePage';
 
 /**
  * Navigation : 5 rubriques dans la barre latérale, des onglets en haut de chaque rubrique.
@@ -80,6 +81,7 @@ export const sections: Section[] = [
     icon: '⚙️',
     pages: [
       { path: '', label: 'Paramètres', element: SettingsPage },
+      { path: 'telephone', label: '📱 Téléphone & synchro', element: PhonePage },
       { path: 'donnees', label: 'Données & sauvegarde', element: DataPage },
     ],
   },

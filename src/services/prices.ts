@@ -6,10 +6,11 @@
  * bloquent les appels directs à Yahoo Finance (CORS).
  */
 import { db } from '../db/db';
-import type { Investment, PriceQuote } from '../db/schema';
+import type { PriceQuote } from '../db/schema';
 import { parseCoingeckoPrice, parseCoingeckoSearch, parseYahooChart, parseYahooSearch, type SearchResult } from '../domain/invest/quotes';
 
-export const quoteId = (inv: Pick<Investment, 'priceSource' | 'symbol'>) => `${inv.priceSource}:${inv.symbol}`;
+export { quoteId } from '../domain/progress';
+import { quoteId } from '../domain/progress';
 
 async function getJson(url: string): Promise<unknown> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });

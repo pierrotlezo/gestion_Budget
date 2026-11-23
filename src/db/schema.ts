@@ -1,3 +1,8 @@
+/** Horodatage de la dernière modification (synchro PC ↔ téléphone), 0 = valeur par défaut. */
+interface Synced {
+  updatedAt?: number;
+}
+
 /**
  * Modèle de données de l'application.
  * Conventions : montants en centimes entiers, dates « AAAA-MM-JJ », taux en décimal (0.017 = 1,7 %).
@@ -12,7 +17,7 @@ export interface RatePeriod {
   rate: number;
 }
 
-export interface Settings {
+export interface Settings extends Synced {
   id: 'app';
   /** Virement mensuel du Livret A vers le compte courant (loyer, électricité). */
   monthlyTransfer: Cents;
@@ -32,6 +37,10 @@ export interface Settings {
   autoDeals: boolean;
   /** Plan « Mon prêt » : ce que je prélève chaque mois sur l'argent du prêt, et pendant combien de temps. */
   loanPlan: LoanPlanSettings;
+  /** Ville pour les bons plans locaux. */
+  city: string;
+  /** Types de notifications envoyées sur le téléphone. */
+  notifications: { budget: boolean; game: boolean; weekly: boolean; deals: boolean };
 }
 
 export interface LoanPlanSettings {
@@ -45,7 +54,7 @@ export interface LoanPlanSettings {
 
 export type CategoryKind = 'expense' | 'income' | 'savings';
 
-export interface Category {
+export interface Category extends Synced {
   id: string;
   name: string;
   color: string;
@@ -60,7 +69,7 @@ export interface Category {
   isDemo?: boolean;
 }
 
-export interface Transaction {
+export interface Transaction extends Synced {
   id: string;
   date: ISODate;
   /** Montant signé : négatif = dépense, positif = entrée d'argent. */
@@ -74,7 +83,7 @@ export interface Transaction {
   isDemo?: boolean;
 }
 
-export interface CategoryRule {
+export interface CategoryRule extends Synced {
   id: string;
   /** Texte recherché dans le libellé (sans tenir compte des majuscules ni des accents). */
   pattern: string;
@@ -90,7 +99,7 @@ export type AmountMapping =
   | { mode: 'debitCredit'; debit: string; credit: string };
 
 /** Format de relevé CSV mémorisé pour une banque. */
-export interface CsvProfile {
+export interface CsvProfile extends Synced {
   id: string;
   name: string;
   delimiter: string;
@@ -105,7 +114,7 @@ export interface CsvProfile {
 
 export type DeferralType = 'none' | 'partial' | 'total';
 
-export interface Loan {
+export interface Loan extends Synced {
   id: string;
   name: string;
   principal: Cents;
@@ -127,7 +136,7 @@ export interface Loan {
 
 export type SavingsType = 'livretA' | 'ldds' | 'lep' | 'other';
 
-export interface SavingsAccount {
+export interface SavingsAccount extends Synced {
   id: string;
   name: string;
   type: SavingsType;
@@ -140,7 +149,7 @@ export interface SavingsAccount {
   isDemo?: boolean;
 }
 
-export interface SavingsMovement {
+export interface SavingsMovement extends Synced {
   id: string;
   accountId: string;
   date: ISODate;
@@ -156,7 +165,7 @@ export interface SavingsMovement {
 export type InvestmentEnvelope = 'pea' | 'cto' | 'crypto' | 'assuranceVie' | 'per' | 'other';
 
 /** Un placement : un ETF dans un PEA, du bitcoin, un fonds euros d'assurance-vie… */
-export interface Investment {
+export interface Investment extends Synced {
   id: string;
   name: string;
   envelope: InvestmentEnvelope;
@@ -168,7 +177,7 @@ export interface Investment {
   isDemo?: boolean;
 }
 
-export interface InvestmentOperation {
+export interface InvestmentOperation extends Synced {
   id: string;
   investmentId: string;
   date: ISODate;
@@ -183,14 +192,14 @@ export interface InvestmentOperation {
 }
 
 /** Dernier cours connu (cache local). id = « yahoo:CW8.PA » ou « coingecko:bitcoin ». */
-export interface PriceQuote {
+export interface PriceQuote extends Synced {
   id: string;
   /** Prix d'une unité, en euros. */
   price: number;
   fetchedAt: string;
 }
 
-export interface SavingsGoal {
+export interface SavingsGoal extends Synced {
   id: string;
   name: string;
   icon: string;
@@ -208,15 +217,14 @@ export interface SavingsGoal {
 }
 
 /** Ce que j'ai fait d'une astuce d'économie. */
-export interface TipState {
+export interface TipState extends Synced {
   /** Identifiant de l'astuce (catalogue). */
   id: string;
   status: 'trying' | 'done' | 'dismissed';
-  updatedAt: string;
 }
 
 /** Scénario du simulateur d'intérêts composés. */
-export interface SimScenario {
+export interface SimScenario extends Synced {
   id: string;
   name: string;
   initial: Cents;

@@ -4,11 +4,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { defaultSettings } from '../db/defaults';
 import type { Category, CategoryRule, Investment, InvestmentOperation, Loan, PriceQuote, SavingsAccount, SavingsGoal, SavingsMovement, Settings, SimScenario, Transaction } from '../db/schema';
-import { computePosition, summarizePortfolio, type Position } from '../domain/invest/portfolio';
-import { balanceAt } from '../domain/savings/quinzaine';
-import { buildSchedule, remainingCapitalAt } from '../domain/loan/amortization';
+import type { Position } from '../domain/invest/portfolio';
 import { todayISO } from '../domain/dates';
-import { quoteId } from '../services/prices';
+import { computeWealth, type Wealth } from '../domain/progress';
 
 export function useSettings(): Settings {
   const stored = useLiveQuery(() => db.settings.get('app'), []);
@@ -74,33 +72,22 @@ export function useScenarios(): SimScenario[] {
 
 /** Valorisation de chaque placement avec le dernier cours connu. */
 export function usePositions(): Position[] {
-  const investments = useInvestments();
-  const ops = useInvestmentOps();
-  const prices = usePrices();
-  return useMemo(() => investments.map((i) => computePosition(i, ops, i.symbol ? prices.get(quoteId(i)) : undefined)), [investments, ops, prices]);
+  return useWealth().positions;
 }
 
 /** Vue d'ensemble : livrets, placements, dette, patrimoine net. */
-export function useWealth() {
+export function useWealth(): Wealth {
   const accounts = useSavingsAccounts();
   const movements = useSavingsMovements();
   const loans = useLoans();
-  const positions = usePositions();
-  return useMemo(() => {
-    const today = todayISO();
-    const savingsByAccount = accounts.map((a) => ({ account: a, balance: balanceAt(movements.filter((m) => m.accountId === a.id), today) }));
-    const savings = savingsByAccount.reduce((s, a) => s + a.balance, 0);
-    const portfolio = summarizePortfolio(positions);
-    const debt = loans.reduce((s, l) => s + remainingCapitalAt(l, buildSchedule(l), today), 0);
-    return { savingsByAccount, savings, positions, portfolio, debt, netWorth: savings + portfolio.value - debt };
-  }, [accounts, movements, loans, positions]);
+  const investments = useInvestments();
+  const investmentOps = useInvestmentOps();
+  const priceList = useLiveQuery(() => db.prices.toArray(), []) ?? EMPTY;
+  return useMemo(
+    () => computeWealth({ investments, investmentOps, prices: priceList, savingsAccounts: accounts, savingsMovements: movements, loans }, todayISO()),
+    [accounts, movements, loans, investments, investmentOps, priceList],
+  );
 }
+const EMPTY: PriceQuote[] = [];
 
-/** Montant actuel d'un objectif (somme de ses sources, ou montant saisi). */
-export function goalCurrentAmount(goal: SavingsGoal, wealth: ReturnType<typeof useWealth>): number {
-  if (goal.sources.length === 0) return goal.manualAmount;
-  return goal.sources.reduce((s, src) => {
-    if (src.kind === 'investment') return s + (wealth.positions.find((p) => p.investment.id === src.id)?.value ?? 0);
-    return s + (wealth.savingsByAccount.find((a) => a.account.id === src.id)?.balance ?? 0);
-  }, 0);
-}
+export { goalCurrentAmount } from '../domain/progress';
