@@ -64,7 +64,7 @@ export function SectionLayout({ section }: { section: Section }) {
     <>
       {section.pages.length > 1 && (
         <div className="-mx-1 mb-6 flex gap-2 overflow-x-auto px-1 pb-1">
-          {section.pages.map((p) => (
+          {section.pages.filter((p) => !p.hidden).map((p) => (
             <NavLink
               key={p.path}
               to={p.path ? `${section.path}/${p.path}` : section.path}

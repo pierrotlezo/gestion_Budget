@@ -70,7 +70,7 @@ export function SettingsPage() {
           </p>
         </Card>
 
-        <Card title="Cours des placements">
+        <Card title="Connexion Internet (facultative)">
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" className="mt-1" checked={draft.autoPrices} onChange={(e) => set('autoPrices', e.target.checked)} />
             <span>
@@ -78,6 +78,13 @@ export function SettingsPage() {
               <span className="block text-xs text-slate-500">
                 Seuls les symboles des placements (ex. « CW8.PA », « bitcoin ») sont envoyés à Yahoo Finance et CoinGecko, via HTTPS. Jamais tes montants ni tes quantités. Désactivé : les cours ne sont mis à jour que quand tu cliques sur « Actualiser ».
               </span>
+            </span>
+          </label>
+          <label className="mt-4 flex items-start gap-3 text-sm">
+            <input type="checkbox" className="mt-1" checked={draft.autoDeals} onChange={(e) => set('autoDeals', e.target.checked)} />
+            <span>
+              Afficher les bons plans du moment (Dealabs) dans « Astuces & bons plans »
+              <span className="block text-xs text-slate-500">L'application télécharge des listes publiques de promotions (courses, transports…). Rien n'est envoyé : le choix des catégories se fait sur ton ordinateur.</span>
             </span>
           </label>
         </Card>

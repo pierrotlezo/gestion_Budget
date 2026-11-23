@@ -9,7 +9,7 @@ import { seriesColor } from '../../app/chartTheme';
 import { useIsDark } from '../../app/theme';
 import { refreshPrices } from '../../services/prices';
 import { Alert, Badge, Button, Card, EmptyState, GainText, PageHeader, Stat, Table } from '../../components/ui';
-import { Donut } from '../../components/Donut';
+import { BreakdownBars } from '../../components/BreakdownBars';
 import { InvestmentForm } from './InvestmentForm';
 import { OperationForm } from './OperationForm';
 
@@ -70,7 +70,7 @@ export function PortfolioPage() {
               ))}
             </div>
             <Card title="Répartition" className="h-fit">
-              <Donut items={positions.map((p) => ({ name: p.investment.name, value: p.value, color: seriesColor(p.investment.color, dark), icon: ENVELOPE_ICONS[p.investment.envelope] }))} centerLabel="investis" />
+              <BreakdownBars items={positions.map((p) => ({ key: p.investment.id, name: p.investment.name, value: p.value, color: seriesColor(p.investment.color, dark), icon: ENVELOPE_ICONS[p.investment.envelope] }))} />
             </Card>
           </div>
         </>

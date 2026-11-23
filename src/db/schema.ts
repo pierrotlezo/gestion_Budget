@@ -28,6 +28,19 @@ export interface Settings {
   livretARates: RatePeriod[];
   /** Mise à jour automatique des cours (seuls les symboles sont envoyés, jamais les montants). */
   autoPrices: boolean;
+  /** Affichage des bons plans du moment (téléchargement des flux publics Dealabs, rien n'est envoyé). */
+  autoDeals: boolean;
+  /** Plan « Mon prêt » : ce que je prélève chaque mois sur l'argent du prêt, et pendant combien de temps. */
+  loanPlan: LoanPlanSettings;
+}
+
+export interface LoanPlanSettings {
+  monthlyDraw: Cents;
+  drawYears: number;
+  /** Argent du prêt disponible aujourd'hui. null = solde des comptes alimentés par le prêt. */
+  availableOverride: Cents | null;
+  /** Les intérêts et l'assurance du différé sont-ils payés avec l'argent du prêt ? */
+  payDeferralFromSavings: boolean;
 }
 
 export type CategoryKind = 'expense' | 'income' | 'savings';
@@ -40,6 +53,10 @@ export interface Category {
   monthlyBudget: Cents;
   kind: CategoryKind;
   order: number;
+  /** Emoji affiché sur la tuile de la catégorie. */
+  icon?: string;
+  /** Flux de bons plans Dealabs associés (ex. « epicerie ») pour les promotions du moment. */
+  dealFeeds?: string[];
   isDemo?: boolean;
 }
 
@@ -185,7 +202,17 @@ export interface SavingsGoal {
   monthlyContribution: Cents;
   /** Rendement annuel supposé (0 pour un livret à taux faible). */
   annualReturn: number;
+  /** Paliers déjà fêtés (25, 50, 75, 100) pour ne célébrer qu'une fois. */
+  milestonesCelebrated?: number[];
   isDemo?: boolean;
+}
+
+/** Ce que j'ai fait d'une astuce d'économie. */
+export interface TipState {
+  /** Identifiant de l'astuce (catalogue). */
+  id: string;
+  status: 'trying' | 'done' | 'dismissed';
+  updatedAt: string;
 }
 
 /** Scénario du simulateur d'intérêts composés. */

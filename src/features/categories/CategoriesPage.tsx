@@ -23,7 +23,7 @@ export function CategoriesPage() {
 
   return (
     <div className="max-w-4xl">
-      <PageHeader title="Catégories" subtitle={`Total des budgets de dépenses et d'épargne : ${formatEUR(totalBudget)} / mois`} />
+      <PageHeader title="Catégories & budgets" subtitle={`Icône, couleur et budget de chaque catégorie · total des budgets : ${formatEUR(totalBudget)} / mois`} />
 
       <Card className="mb-4">
         <form
@@ -81,6 +81,13 @@ function CategoryRow({ category: c, budgetLabel, onUp, onDown, onDelete }: { cat
   const [name, setName] = useState(c.name);
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg p-1 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+      <Input
+        defaultValue={c.icon ?? ''}
+        onBlur={(e) => e.target.value.trim() && updateCategory(c.id, { icon: e.target.value.trim() })}
+        className="w-14 text-center text-lg"
+        aria-label={`Icône de ${c.name}`}
+        title="Icône (emoji) — Windows : touche Windows + . · Mac : Ctrl + Cmd + Espace"
+      />
       <input
         type="color"
         value={c.color}

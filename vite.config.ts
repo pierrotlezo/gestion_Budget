@@ -4,7 +4,8 @@ import tailwindcss from '@tailwindcss/vite';
 
 /**
  * Proxy local vers les fournisseurs de cours (le navigateur ne peut pas les appeler directement).
- * Seuls les symboles des placements transitent (ex. « CW8.PA », « bitcoin »), jamais tes montants.
+ * Seuls les symboles des placements (ex. « CW8.PA », « bitcoin ») et les noms de flux de bons plans
+ * transitent, jamais tes montants ni tes opérations.
  */
 const target = (url: string, prefix: string) => ({
   target: url,
@@ -20,6 +21,8 @@ const proxy = {
   '/api/yahoo1': target('https://query1.finance.yahoo.com', '/api/yahoo1'),
   '/api/yahoo2': target('https://query2.finance.yahoo.com', '/api/yahoo2'),
   '/api/coingecko': target('https://api.coingecko.com', '/api/coingecko'),
+  // Bons plans : téléchargement des flux RSS publics (rien n'est envoyé)
+  '/api/dealabs': target('https://www.dealabs.com', '/api/dealabs'),
 };
 
 // Le serveur n'écoute que sur la machine locale : rien n'est exposé sur le réseau.

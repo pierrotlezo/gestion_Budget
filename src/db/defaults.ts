@@ -30,9 +30,26 @@ export const defaultSettings: Settings = {
   livretACeiling: 2295000,
   livretARates: LIVRET_A_RATES,
   autoPrices: true,
+  autoDeals: true,
+  loanPlan: { monthlyDraw: 60000, drawYears: 3, availableOverride: null, payDeferralFromSavings: true },
 };
 
-export const defaultCategories: Category[] = [
+/** Icône et flux de bons plans Dealabs de chaque catégorie par défaut. */
+export const CATEGORY_EXTRAS: Record<string, { icon: string; dealFeeds?: string[] }> = {
+  'cat-loyer': { icon: '🏠' },
+  'cat-alimentation': { icon: '🛒', dealFeeds: ['epicerie', 'restaurants'] },
+  'cat-energie': { icon: '⚡', dealFeeds: ['energie'] },
+  'cat-abonnements': { icon: '📱', dealFeeds: ['forfaits-mobiles', 'telephonie'] },
+  'cat-transport': { icon: '🚆', dealFeeds: ['transports-en-commun', 'voyages'] },
+  'cat-divertissement': { icon: '🎬', dealFeeds: ['sorties', 'cinema', 'culture-divertissement'] },
+  'cat-epargne': { icon: '🐷' },
+  'cat-autre': { icon: '📦', dealFeeds: ['gratuit'] },
+  'cat-virement-livret': { icon: '🏦' },
+  'cat-parents': { icon: '💝' },
+  'cat-autres-revenus': { icon: '💶' },
+};
+
+const baseCategories: Category[] = [
   { id: 'cat-loyer', name: 'Loyer', color: '#2a78d6', monthlyBudget: 0, kind: 'expense', order: 0 },
   { id: 'cat-alimentation', name: 'Alimentation', color: '#eb6834', monthlyBudget: 25000, kind: 'expense', order: 1 },
   { id: 'cat-energie', name: 'Électricité/Énergie', color: '#1baf7a', monthlyBudget: 0, kind: 'expense', order: 2 },
@@ -45,6 +62,8 @@ export const defaultCategories: Category[] = [
   { id: 'cat-parents', name: 'Aide des parents', color: '#eb6834', monthlyBudget: 25000, kind: 'income', order: 9 },
   { id: 'cat-autres-revenus', name: 'Autres revenus', color: '#1baf7a', monthlyBudget: 0, kind: 'income', order: 10 },
 ];
+
+export const defaultCategories: Category[] = baseCategories.map((c) => ({ ...c, ...CATEGORY_EXTRAS[c.id] }));
 
 const ruleSet: [string, string][] = [
   ['CARREFOUR', 'cat-alimentation'],

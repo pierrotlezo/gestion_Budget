@@ -8,6 +8,7 @@ import type {
   Loan,
   PriceQuote,
   SavingsGoal,
+  TipState,
   SimScenario,
   SavingsAccount,
   SavingsMovement,
@@ -15,6 +16,7 @@ import type {
   Transaction,
 } from './schema';
 import {
+  CATEGORY_EXTRAS,
   defaultScenarios,
   investmentRuleSet,
   defaultCategories,
@@ -45,6 +47,7 @@ export class BudgetDB extends Dexie {
   prices!: Table<PriceQuote, string>;
   goals!: Table<SavingsGoal, string>;
   scenarios!: Table<SimScenario, string>;
+  tipStates!: Table<TipState, string>;
 
   constructor(name = 'gestion-budget') {
     super(name);
@@ -83,6 +86,21 @@ export class BudgetDB extends Dexie {
         await tx.table('scenarios').bulkAdd(defaultScenarios);
       });
 
+    // Version 3 : icônes de catégories, astuces d'économie, bons plans, plan de prêt
+    this.version(3)
+      .stores({ tipStates: 'id' })
+      .upgrade(async (tx) => {
+        await tx.table('categories').toCollection().modify((c) => {
+          const extra = CATEGORY_EXTRAS[c.id];
+          if (!c.icon) c.icon = extra?.icon ?? '🏷️';
+          if (!c.dealFeeds && extra?.dealFeeds) c.dealFeeds = extra.dealFeeds;
+        });
+        await tx.table('settings').toCollection().modify((s) => {
+          if (s.autoDeals === undefined) s.autoDeals = true;
+          if (!s.loanPlan) s.loanPlan = { monthlyDraw: s.monthlyTransfer ?? 60000, drawYears: 3, availableOverride: null, payDeferralFromSavings: true };
+        });
+      });
+
     this.on('populate', (tx) => {
       tx.table('settings').add(defaultSettings);
       tx.table('categories').bulkAdd(defaultCategories);
@@ -111,6 +129,7 @@ export const DATA_TABLES = [
   'prices',
   'goals',
   'scenarios',
+  'tipStates',
 ] as const;
 export type DataTable = (typeof DATA_TABLES)[number];
 

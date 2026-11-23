@@ -38,7 +38,8 @@ export function generateDemoTransactions(today: ISODate, rules: CategoryRule[]):
     add(3, 'PRLV SEPA LOYER RESIDENCE', -43000);
     add(6, 'PRLV SEPA EDF CLIENTS PARTICULIERS', -between(32, 45));
     add(5, 'PRLV SEPA FREE MOBILE', -1599);
-    add(10, 'PRLV SEPA NETFLIX.COM', -1349);
+    // Hausse de prix le dernier mois, pour montrer l'alerte « abonnement plus cher »
+    add(10, 'PRLV SEPA NETFLIX.COM', month === monthOf(today) ? -1499 : -1349);
     add(12, 'PRLV SEPA SPOTIFY', -1217);
 
     const shops = ['CB CARREFOUR CITY', 'CB LIDL', 'CB AUCHAN', 'CB CARREFOUR MARKET', 'CB MONOPRIX'];

@@ -14,6 +14,7 @@ export async function addCategory(name: string, kind: CategoryKind): Promise<str
     kind,
     color: PALETTE[all.length % PALETTE.length],
     monthlyBudget: 0,
+    icon: '🏷️',
     order: Math.max(-1, ...all.map((c) => c.order)) + 1,
   });
   return id;

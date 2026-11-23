@@ -10,7 +10,7 @@ import { formatEUR } from '../../domain/money';
 import { CATEGORICAL, seriesColor } from '../../app/chartTheme';
 import { useIsDark } from '../../app/theme';
 import { Button, Card, EmptyState, GainText, PageHeader, ProgressBar, Stat } from '../../components/ui';
-import { Donut } from '../../components/Donut';
+import { BreakdownBars } from '../../components/BreakdownBars';
 import { SaveDialog } from '../home/SaveDialog';
 
 export function OverviewPage() {
@@ -26,8 +26,8 @@ export function OverviewPage() {
 
   // Répartition : chaque livret + chaque enveloppe d'investissement, couleurs dans un ordre fixe
   const items = [
-    ...wealth.savingsByAccount.map((a) => ({ name: a.account.name, value: a.balance, icon: '🐷' })),
-    ...wealth.portfolio.byEnvelope.map((e) => ({ name: ENVELOPE_LABELS[e.envelope], value: e.value, icon: ENVELOPE_ICONS[e.envelope] })),
+    ...wealth.savingsByAccount.map((a) => ({ key: a.account.id, name: a.account.name, value: a.balance, icon: '🐷', to: '/epargne/livrets' })),
+    ...wealth.portfolio.byEnvelope.map((e) => ({ key: e.envelope, name: ENVELOPE_LABELS[e.envelope], value: e.value, icon: ENVELOPE_ICONS[e.envelope], to: '/epargne/placements' })),
   ].map((it, i) => ({ ...it, color: seriesColor(CATEGORICAL[i % CATEGORICAL.length], dark) }));
   const assets = wealth.savings + wealth.portfolio.value;
 
@@ -61,7 +61,7 @@ export function OverviewPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Répartition" actions={<Link to="/epargne/placements" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Mes placements</Link>}>
-          <Donut items={items} centerLabel="épargnés" empty="Ajoute un livret ou un placement pour voir ta répartition." />
+          <BreakdownBars items={items} empty="Ajoute un livret ou un placement pour voir ta répartition." />
         </Card>
 
         <Card title="Mes objectifs" actions={<Link to="/epargne/objectifs" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Gérer</Link>}>

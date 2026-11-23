@@ -11,3 +11,13 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   font-variant-numeric: tabular-nums;
 }
+
+/* Confettis de célébration (désactivés si l'utilisateur préfère moins d'animations) */
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--drift), 105vh, 0) rotate(720deg); opacity: 0.9; }
+}
+.confetti-piece { position: fixed; top: 0; width: 9px; height: 14px; border-radius: 2px; z-index: 70; pointer-events: none; animation: confetti-fall var(--dur) cubic-bezier(.2,.6,.4,1) forwards; }
+@keyframes pop-in { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+.pop-in { animation: pop-in .35s ease-out; }
+@media (prefers-reduced-motion: reduce) { .confetti-piece { display: none; } .pop-in { animation: none; } }

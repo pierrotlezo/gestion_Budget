@@ -10,7 +10,9 @@ import { goalProgress } from '../../domain/invest/goals';
 import { seriesColor } from '../../app/chartTheme';
 import { useIsDark } from '../../app/theme';
 import { Button, Card, ColorDot, EmptyState, ProgressBar, Stat } from '../../components/ui';
-import { Donut } from '../../components/Donut';
+import { BreakdownBars } from '../../components/BreakdownBars';
+import { useGameProgress, useInsights } from '../../hooks/insights';
+import { TipCard } from '../tips/TipCard';
 import { TransactionForm } from '../transactions/TransactionForm';
 import { SaveDialog } from './SaveDialog';
 
@@ -34,8 +36,10 @@ export function HomePage() {
   const spending = summary.byCategory.filter((c) => c.category.kind === 'expense');
   const budgeted = spending.filter((c) => c.budget > 0);
   const others = spending.filter((c) => c.budget === 0 && c.amount > 0);
-  const donut = spending.map((c) => ({ name: c.category.name, value: c.amount, color: seriesColor(c.category.color, dark) }));
-  if (summary.uncategorizedOut > 0) donut.push({ name: 'À catégoriser', value: summary.uncategorizedOut, color: dark ? '#64748b' : '#94a3b8' });
+  const bars = spending.map((c) => ({ key: c.category.id, name: c.category.name, value: c.amount, color: seriesColor(c.category.color, dark), icon: c.category.icon, to: `/depenses/categorie/${c.category.id}` }));
+  if (summary.uncategorizedOut > 0) bars.push({ key: '__none', name: 'À trier', value: summary.uncategorizedOut, color: dark ? '#64748b' : '#94a3b8', icon: '❔', to: '/depenses/categorie/__none' });
+  const game = useGameProgress();
+  const insights = useInsights();
   const spentRatio = summary.income > 0 ? (capacity.consumption + capacity.saved) / summary.income : 0;
   const isCurrent = month === currentMonth();
 
@@ -46,6 +50,10 @@ export function HomePage() {
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Bonjour 👋</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">Voici où en est ton mois de <span className="font-medium">{formatMonth(month)}</span>.</p>
         </div>
+        <Link to="/epargne/objectifs" className="flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90">
+          <span aria-hidden>{game.level.current.icon}</span> Niv. {game.level.current.level} · {game.xp} XP
+          <span className="rounded-full bg-white/20 px-2 py-0.5">{game.streak > 0 ? '🔥' : '🧊'} {game.streak}</span>
+        </Link>
         <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 dark:border-slate-700 dark:bg-slate-900">
           <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setMonth((m) => addMonthsToKey(m, -1))} aria-label="Mois précédent">◀</Button>
           <span className="min-w-28 text-center text-sm font-medium capitalize">{formatMonth(month, true)}</span>
@@ -80,7 +88,7 @@ export function HomePage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat icon="💶" label="Entrées" value={formatEUR(summary.income)} />
-        <Stat icon="🛒" label="Dépenses" value={formatEUR(capacity.consumption)} hint={summary.uncategorizedOut > 0 ? <Link to="/depenses" className="underline">Des opérations sont à catégoriser</Link> : undefined} />
+        <Stat icon="🛒" label="Dépenses" value={formatEUR(capacity.consumption)} hint={summary.uncategorizedOut > 0 ? <Link to="/depenses/categorie/__none" className="underline">Des opérations sont à trier</Link> : undefined} />
         <Stat icon="🐷" label="Mis de côté" value={formatEUR(capacity.saved)} hint={summary.income > 0 ? `Taux d'épargne possible : ${Math.round(capacity.savingsRate * 100)} %` : undefined} />
       </div>
 
@@ -107,8 +115,18 @@ export function HomePage() {
         </div>
       </Card>
 
+      {insights.ofTheMonth.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">💡 Pour économiser ce mois-ci</h2>
+            <Link to="/depenses/astuces" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Astuces & bons plans →</Link>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">{insights.ofTheMonth.map((s) => <TipCard key={s.tip.id} s={s} compact />)}</div>
+        </section>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Mes budgets" actions={<Link to="/depenses/categories" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Modifier</Link>}>
+        <Card title="Mes budgets" actions={<Link to="/depenses/reglages" className="text-sm text-indigo-600 hover:underline dark:text-indigo-400">Modifier</Link>}>
           {budgeted.length === 0 ? (
             <EmptyState>Fixe un budget mensuel pour tes catégories (Alimentation, Loisirs…) pour suivre tes dépenses ici.</EmptyState>
           ) : (
@@ -129,7 +147,7 @@ export function HomePage() {
         </Card>
 
         <Card title="Où part mon argent ?">
-          <Donut items={donut} centerLabel="dépensés" empty="Aucune dépense ce mois-ci." />
+          <BreakdownBars items={bars} totalLabel="Total dépensé" empty="Aucune dépense ce mois-ci." />
         </Card>
       </div>
 

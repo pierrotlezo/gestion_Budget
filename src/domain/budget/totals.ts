@@ -56,7 +56,7 @@ export function summarizeMonth(transactions: Transaction[], categories: Category
   let spent = uncategorizedOut;
   const byCategory = categories.map((category): CategoryTotal => {
     const net = sums.get(category.id) ?? 0;
-    const amount = category.kind === 'income' ? net : -net;
+    const amount = category.kind === 'income' ? net : 0 - net; // « 0 - net » évite un « -0 »
     if (category.kind === 'income') income += amount;
     else spent += amount;
     const budget = category.monthlyBudget;

@@ -4,7 +4,9 @@ Application web personnelle, en français, pour **visualiser ses dépenses afin 
 
 🔒 **Confidentialité** : tes données ne quittent jamais la machine. Pas de serveur, pas de compte, pas de statistiques d'usage. Les données sont stockées dans le navigateur (IndexedDB), et le serveur local n'écoute que sur `127.0.0.1`.
 
-Seule exception, désactivable dans **Réglages** : la mise à jour des **cours des placements**. Seuls les symboles (ex. `CW8.PA`, `bitcoin`) sont envoyés en HTTPS à Yahoo Finance et CoinGecko, sans cookies ni page d'origine. Tes montants et tes quantités ne sont jamais envoyés.
+Deux exceptions, désactivables dans **Réglages** :
+- **Cours des placements** : seuls les symboles (ex. `CW8.PA`, `bitcoin`) sont envoyés en HTTPS à Yahoo Finance et CoinGecko, sans cookies ni page d'origine. Tes montants et tes quantités ne sont jamais envoyés.
+- **Bons plans du moment** : l'application télécharge des flux publics de promotions Dealabs (courses, transports, forfaits…). Rien n'est envoyé, et le choix des flux se fait sur ton ordinateur.
 
 ## Lancer l'application
 
@@ -50,22 +52,36 @@ L'application est organisée en 5 rubriques :
 
 - 🏠 **Accueil** :
   - ce qu'il te reste ce mois-ci et ce que tu as mis de côté ;
-  - ton **potentiel d'épargne** moyen et ce qu'il deviendrait s'il était investi ;
-  - tes budgets (orange à 80 %, rouge en cas de dépassement), la répartition des dépenses et tes objectifs ;
-  - le bouton **« J'épargne »** pour enregistrer un versement en un clic.
+  - ton niveau et ta série 🔥 ;
+  - ton potentiel d'épargne et les **astuces du mois** ;
+  - tes budgets et la répartition de tes dépenses en barres (un clic ouvre la catégorie) ;
+  - le bouton **« J'épargne »**.
 - 💸 **Dépenses** :
-  - transactions avec recherche et filtres ;
-  - import CSV (virgule décimale, dates JJ/MM/AAAA, Débit/Crédit, encodage Windows-1252, doublons ignorés) ;
-  - catégories et budgets ;
-  - règles de catégorisation, avec une proposition de règle quand tu recatégorises une opération à la main.
+  - **Par catégorie** : une tuile par catégorie, cliquable. Chaque catégorie a sa page : total, budget modifiable, comparaison avec ta moyenne, astuces, opérations. La tuile « À trier » permet de classer en un clic.
+  - **Opérations** : toutes les opérations, groupées par jour.
+  - **Astuces & bons plans** :
+    - 3 astuces qui changent chaque mois, choisies d'après tes dépenses ;
+    - tes abonnements, avec une alerte en cas de hausse de prix ;
+    - les autres prélèvements réguliers ;
+    - les bons plans du moment dans les catégories où tu dépenses le plus.
+  - **Importer** un relevé CSV.
+  - **Catégories & règles** : icône, couleur, budget, tri automatique.
 - 📈 **Épargne & Invest.** :
-  - **Vue d'ensemble** : épargne totale, patrimoine net, répartition, taux d'épargne.
-  - **Placements** : BTC, ETF, actions, assurance-vie, PER… Cours automatiques, plus-values, historique des achats et ventes. Les placements sans cotation (fonds euros, PER) se mettent à jour à la main.
-  - **Livrets** : plusieurs comptes, intérêts calculés par quinzaine, alerte de plafond.
-  - **Objectifs** : progression, date estimée, effort mensuel nécessaire pour tenir une échéance.
-  - **Simulateur** : intérêts composés, jusqu'à 4 scénarios comparés.
-- 🏦 **Prêt** : différé partiel ou total, tableau d'amortissement, coût du crédit, comparaison **prêt vs épargne**.
-- ⚙️ **Réglages** : paramètres, cours automatiques, thème clair ou sombre, sauvegarde et restauration JSON, export CSV, données de démonstration.
+  - **Vue d'ensemble** : épargne totale, patrimoine net, répartition.
+  - **Placements** : BTC, ETF, PEA, assurance-vie, PER, avec cours automatiques et plus-values.
+  - **Livrets** : intérêts calculés par quinzaine, alerte de plafond.
+  - **🎮 Objectifs**, présentés comme un jeu :
+    - niveaux (🌱 Graine → 👑 Légende) et points d'expérience ;
+    - série de mois épargnés et mission du mois ;
+    - 12 badges à débloquer ;
+    - objectifs en quêtes avec paliers à 25 / 50 / 75 / 100 % et confettis.
+  - **Simulateur** d'intérêts composés.
+- 🏦 **Prêt** :
+  - **Mon plan** : « je prends X €/mois sur le prêt pendant N ans ». Le plan estime la mensualité de remboursement à la fin du différé, avec ou sans remboursement anticipé de l'argent restant, et prévient si l'argent est épuisé avant la fin.
+  - **Détails du prêt** (tableau d'amortissement) et **Prêt vs épargne**.
+- ⚙️ **Réglages** : paramètres, connexions Internet facultatives, thème, sauvegarde JSON, export CSV, démo.
+
+Les astuces sont des **données** (`src/db/tipsCatalog.ts`) : on peut en ajouter sans toucher au code.
 
 ## Règles de calcul
 
@@ -78,6 +94,12 @@ L'application est organisée en 5 rubriques :
 **Intérêts composés.** Le rendement annuel est converti en taux mensuel équivalent, (1 + r)^(1/12) − 1. Les versements sont faits en fin de mois.
 
 **Capacité d'épargne.** Potentiel = revenus − dépenses de consommation. Ce que tu as « mis de côté » correspond aux sorties classées dans une catégorie de type Épargne. Les virements vers Trade Republic, Coinbase, Binance… y sont classés automatiquement.
+
+**Mon plan (prêt).** C'est une estimation mois par mois. L'argent restant rapporte le taux actuel du livret. On retire le montant choisi pendant la durée choisie, plus les intérêts du différé si tu le coches. À la fin du différé, on compare deux mensualités : la mensualité normale, et celle calculée sur le capital diminué de l'argent restant (même durée).
+
+**Abonnements.** Un même libellé (sans chiffres) revient au plus une fois par mois, sur au moins 3 des 4 derniers mois, avec un montant quasi identique. Une hausse est signalée au-delà de 2 %.
+
+**Jeu.** On compte 1 XP par euro mis de côté. L'épargne d'un mois correspond au plus grand des deux montants : virements classés en Épargne, ou achats et versements, pour ne pas compter deux fois le même argent. S'y ajoutent les paliers d'objectifs, 50 XP par badge, et 20 ou 40 XP par astuce essayée ou adoptée.
 
 **Livret A / LDDS (règle des quinzaines).** L'année compte 24 quinzaines (du 1er au 15, puis du 16 à la fin du mois).
 - Un versement rapporte à partir de la quinzaine suivante.
@@ -101,8 +123,10 @@ src/
 │   ├── rules/                  Catégorisation automatique
 │   ├── csv/                    Lecture des relevés et export CSV
 │   ├── invest/                 Placements, cours, intérêts composés, objectifs
+│   ├── tips/                   Astuces, abonnements, bons plans
+│   ├── gamification.ts         Niveaux, XP, badges, séries
 │   └── netWorth.ts             Comparaison prêt / épargne, patrimoine net
-├── services/     Accès réseau (cours des placements uniquement)
+├── services/     Accès réseau facultatif (cours des placements, bons plans)
 ├── features/     Un dossier par écran (home, transactions, invest, savings, loan…)
 ├── components/   Composants d'interface réutilisables
 └── hooks/        Accès réactif aux données (useLiveQuery)
@@ -116,7 +140,7 @@ Conventions :
 
 ### Ajouter un module (prochaines versions)
 
-Idées pour la suite : détection des abonnements récurrents et des hausses de prix, prévision de fin de mois, historique de la valeur des placements. Pour chaque module :
+Idées pour la suite : import OFX, prévision de fin de mois, historique de la valeur des placements. Pour chaque module :
 
 1. Les calculs dans `src/domain/<module>/` avec leurs tests `*.test.ts`.
 2. Si de nouvelles tables sont nécessaires : `this.version(2).stores({ … })` dans `src/db/db.ts`. On ajoute toujours une nouvelle version, on ne modifie jamais une version existante. Ajouter aussi la table à `DATA_TABLES` pour qu'elle entre dans la sauvegarde.

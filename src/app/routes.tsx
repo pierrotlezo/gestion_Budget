@@ -1,9 +1,12 @@
 import type { ComponentType } from 'react';
 import { HomePage } from '../features/home/HomePage';
 import { TransactionsPage } from '../features/transactions/TransactionsPage';
+import { CategoryGridPage } from '../features/transactions/CategoryGridPage';
+import { CategoryDetailPage } from '../features/transactions/CategoryDetailPage';
+import { TipsPage } from '../features/tips/TipsPage';
+import { CategorySettingsPage } from '../features/categories/CategorySettingsPage';
+import { LoanPlanPage } from '../features/loan/LoanPlanPage';
 import { CsvImportPage } from '../features/transactions/csv-import/CsvImportPage';
-import { CategoriesPage } from '../features/categories/CategoriesPage';
-import { RulesPage } from '../features/rules/RulesPage';
 import { OverviewPage } from '../features/invest/OverviewPage';
 import { PortfolioPage } from '../features/invest/PortfolioPage';
 import { SavingsPage } from '../features/savings/SavingsPage';
@@ -23,6 +26,8 @@ export interface SubPage {
   path: string;
   label: string;
   element: ComponentType;
+  /** Page sans onglet (ex. détail d'une catégorie). */
+  hidden?: boolean;
 }
 
 export interface Section {
@@ -39,10 +44,12 @@ export const sections: Section[] = [
     label: 'Dépenses',
     icon: '💸',
     pages: [
-      { path: '', label: 'Transactions', element: TransactionsPage },
-      { path: 'importer', label: 'Importer un relevé', element: CsvImportPage },
-      { path: 'categories', label: 'Catégories & budgets', element: CategoriesPage },
-      { path: 'regles', label: 'Règles', element: RulesPage },
+      { path: '', label: 'Par catégorie', element: CategoryGridPage },
+      { path: 'operations', label: 'Opérations', element: TransactionsPage },
+      { path: 'astuces', label: '💡 Astuces & bons plans', element: TipsPage },
+      { path: 'importer', label: 'Importer', element: CsvImportPage },
+      { path: 'reglages', label: 'Catégories & règles', element: CategorySettingsPage },
+      { path: 'categorie/:id', label: 'Catégorie', element: CategoryDetailPage, hidden: true },
     ],
   },
   {
@@ -53,7 +60,7 @@ export const sections: Section[] = [
       { path: '', label: "Vue d'ensemble", element: OverviewPage },
       { path: 'placements', label: 'Placements', element: PortfolioPage },
       { path: 'livrets', label: 'Livrets', element: SavingsPage },
-      { path: 'objectifs', label: 'Objectifs', element: GoalsPage },
+      { path: 'objectifs', label: '🎮 Objectifs', element: GoalsPage },
       { path: 'simulateur', label: 'Simulateur', element: SimulatorPage },
     ],
   },
@@ -62,7 +69,8 @@ export const sections: Section[] = [
     label: 'Prêt',
     icon: '🏦',
     pages: [
-      { path: '', label: 'Mon prêt', element: LoanPage },
+      { path: '', label: 'Mon plan', element: LoanPlanPage },
+      { path: 'details', label: 'Détails du prêt', element: LoanPage },
       { path: 'comparaison', label: 'Prêt vs épargne', element: LoanVsSavingsPage },
     ],
   },

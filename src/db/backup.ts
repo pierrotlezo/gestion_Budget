@@ -4,10 +4,10 @@
  * ajouter une étape dans `migrateBackup` à chaque changement de format.
  */
 import { DATA_TABLES, type BudgetDB, type DataTable } from './db';
-import { defaultScenarios, defaultSettings } from './defaults';
+import { CATEGORY_EXTRAS, defaultScenarios, defaultSettings } from './defaults';
 
 export const BACKUP_APP = 'gestion-budget';
-export const BACKUP_FORMAT_VERSION = 2;
+export const BACKUP_FORMAT_VERSION = 3;
 
 export interface Backup {
   app: typeof BACKUP_APP;
@@ -44,6 +44,11 @@ export function migrateBackup(raw: unknown): Backup {
   data.settings = data.settings.map((s) => ({ ...defaultSettings, ...(s as object) }));
   if (data.settings.length === 0) data.settings = [defaultSettings];
   if (b.formatVersion < 2 && data.scenarios.length === 0) data.scenarios = defaultScenarios;
+  // Version 2 → 3 : icônes et flux de bons plans des catégories par défaut
+  data.categories = data.categories.map((c) => {
+    const cat = c as { id: string; icon?: string };
+    return cat.icon ? cat : { ...CATEGORY_EXTRAS[cat.id], icon: CATEGORY_EXTRAS[cat.id]?.icon ?? '🏷️', ...cat };
+  });
   return { app: BACKUP_APP, formatVersion: BACKUP_FORMAT_VERSION, exportedAt: b.exportedAt ?? '', data };
 }
 
