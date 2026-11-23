@@ -16,7 +16,7 @@ export function ComparisonCard() {
   if (linked.length === 0) {
     return (
       <Card title="Prêt vs épargne">
-        <p className="text-sm text-slate-500">Indique dans la vue Épargne quel compte est alimenté par le prêt pour comparer son coût aux intérêts gagnés.</p>
+        <p className="text-sm text-slate-500">Indique dans Épargne & Invest. → Livrets quel compte est alimenté par le prêt pour comparer son coût aux intérêts gagnés.</p>
       </Card>
     );
   }
@@ -34,7 +34,7 @@ function LoanComparison({ loan, ctx }: { loan: Loan; ctx: Parameters<typeof comp
   const fundedNames = ctx.accounts.filter((a) => a.fundedByLoanId === loan.id).map((a) => a.name).join(', ');
   return (
     <Card title={`${loan.name} vs ${fundedNames}`}>
-      {loan.annualRate === 0 && <p className="mb-3 text-sm text-orange-600 dark:text-orange-400">⚠️ Le taux du prêt est à 0 % : renseigne-le dans la vue Prêt.</p>}
+      {loan.annualRate === 0 && <p className="mb-3 text-sm text-orange-600 dark:text-orange-400">⚠️ Le taux du prêt est à 0 % : renseigne-le dans Prêt → Mon prêt.</p>}
       <div className="grid gap-4 md:grid-cols-2">
         <Block title={`En ${c.year}`} cost={c.yearLoanCost} gain={c.yearSavingsInterest} />
         <Block title={`Du ${formatDateFR(c.horizonFrom)} au ${formatDateFR(c.horizonTo)}`} subtitle={loan.deferral.type !== 'none' ? 'Durée du différé, pendant laquelle l\'argent est placé' : 'Durée du prêt'} cost={c.horizonLoanCost} gain={c.horizonSavingsInterest} />

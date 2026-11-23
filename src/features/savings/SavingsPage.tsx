@@ -9,7 +9,6 @@ import { formatDateFR, parts, toISO, todayISO } from '../../domain/dates';
 import { formatEUR, formatPercent } from '../../domain/money';
 import { Alert, Button, Card, EmptyState, Field, Input, Modal, MoneyInput, PageHeader, ProgressBar, Select, Stat, Table } from '../../components/ui';
 import { RateHistoryEditor } from '../../components/RateHistoryEditor';
-import { ComparisonCard } from '../loan/ComparisonCard';
 
 export function SavingsPage() {
   const accounts = useSavingsAccounts();
@@ -23,7 +22,7 @@ export function SavingsPage() {
 
   return (
     <div>
-      <PageHeader title="Épargne" subtitle={`Total : ${formatEUR(total)}`} actions={<Button variant="primary" onClick={() => setEditing('new')}>+ Ajouter un compte</Button>} />
+      <PageHeader title="Mes livrets" subtitle={`Total : ${formatEUR(total)}`} actions={<Button variant="primary" onClick={() => setEditing('new')}>+ Ajouter un compte</Button>} />
 
       {accounts.length === 0 ? (
         <EmptyState>Aucun compte d'épargne.</EmptyState>
@@ -37,9 +36,6 @@ export function SavingsPage() {
 
       {account && <AccountDetail key={account.id} account={account} movements={movements.filter((m) => m.accountId === account.id)} settings={settings} />}
 
-      <div className="mt-4">
-        <ComparisonCard />
-      </div>
 
       {editing && <AccountForm initial={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} />}
     </div>

@@ -2,7 +2,7 @@
  * Valeurs par défaut, insérées à la création de la base.
  * Ce sont des DONNÉES : tout est modifiable ensuite dans l'application.
  */
-import type { Category, CategoryRule, Loan, SavingsAccount, Settings } from './schema';
+import type { Category, CategoryRule, Loan, SavingsAccount, Settings, SimScenario } from './schema';
 
 /**
  * Historique officiel des taux du Livret A (le LDDS a le même taux).
@@ -29,6 +29,7 @@ export const defaultSettings: Settings = {
   parentsAllowance: 25000,
   livretACeiling: 2295000,
   livretARates: LIVRET_A_RATES,
+  autoPrices: true,
 };
 
 export const defaultCategories: Category[] = [
@@ -67,7 +68,18 @@ const ruleSet: [string, string][] = [
   ['LOYER', 'cat-loyer'],
 ];
 
-export const defaultRules: CategoryRule[] = ruleSet.map(([pattern, categoryId], i) => ({
+/** Virements vers des plateformes d'investissement → catégorie Épargne (ajoutées en version 2). */
+export const investmentRuleSet: [string, string][] = [
+  ['TRADE REPUBLIC', 'cat-epargne'],
+  ['COINBASE', 'cat-epargne'],
+  ['BINANCE', 'cat-epargne'],
+  ['BITPANDA', 'cat-epargne'],
+  ['BITSTACK', 'cat-epargne'],
+  ['DEGIRO', 'cat-epargne'],
+  ['YOMONI', 'cat-epargne'],
+];
+
+export const defaultRules: CategoryRule[] = [...ruleSet, ...investmentRuleSet].map(([pattern, categoryId], i) => ({
   id: `rule-${i}`,
   pattern,
   match: 'contains',
@@ -88,4 +100,10 @@ export const defaultLoan: Loan = {
 
 export const defaultSavingsAccounts: SavingsAccount[] = [
   { id: DEFAULT_LIVRET_A_ID, name: 'Livret A', type: 'livretA', rates: null, ceiling: null, fundedByLoanId: DEFAULT_LOAN_ID },
+];
+
+/** Scénarios de départ du simulateur (rendements supposés, modifiables). */
+export const defaultScenarios: SimScenario[] = [
+  { id: 'sim-livret', name: 'Livret A', initial: 0, monthly: 10000, years: 10, annualReturn: 0.015, color: '#2a78d6' },
+  { id: 'sim-etf', name: 'ETF Monde (PEA)', initial: 0, monthly: 10000, years: 10, annualReturn: 0.07, color: '#eb6834' },
 ];

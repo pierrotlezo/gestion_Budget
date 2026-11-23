@@ -54,7 +54,7 @@ export function TransactionsPage() {
         subtitle={uncategorized > 0 ? `${uncategorized} transaction(s) à catégoriser` : undefined}
         actions={
           <>
-            <Link to="/import"><Button>📥 Importer un relevé CSV</Button></Link>
+            <Link to="/depenses/importer"><Button>📥 Importer un relevé CSV</Button></Link>
             <Button variant="primary" onClick={() => setEditing('new')}>+ Nouvelle transaction</Button>
           </>
         }

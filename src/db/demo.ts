@@ -3,7 +3,7 @@
  * Tout est marqué `isDemo: true` et s'efface en un clic sans toucher aux vraies données.
  */
 import { db, newId, type BudgetDB } from './db';
-import type { CategoryRule, RatePeriod, SavingsMovement, Transaction } from './schema';
+import type { CategoryRule, Investment, InvestmentOperation, RatePeriod, SavingsGoal, SavingsMovement, Transaction } from './schema';
 import { yearInterest } from '../domain/savings/quinzaine';
 import { DEFAULT_LIVRET_A_ID, LIVRET_A_RATES } from './defaults';
 import { addMonthsToKey, daysInMonth, lastMonths, monthOf, parts, todayISO, toISO, type ISODate } from '../domain/dates';
@@ -46,6 +46,8 @@ export function generateDemoTransactions(today: ISODate, rules: CategoryRule[]):
     for (let k = 0; k < groceries; k++) add(2 + Math.floor((k * 26) / groceries + rand() * 3), pick(shops), -between(24, 62));
 
     if (rand() < 0.8) add(8 + Math.floor(rand() * 15), pick(['CB SNCF CONNECT', 'CB OUIGO']), -between(15, 49));
+    // Achat programmé de bitcoin (voir les placements de démo) : classé en Épargne par la règle COINBASE
+    if (month >= addMonthsToKey(monthOf(today), -7)) add(15, 'PRLV SEPA COINBASE EUROPE', -2500);
     if (rand() < 0.6) add(14 + Math.floor(rand() * 10), 'CB CINEMA PATHE', -1150, 'cat-divertissement');
     if (rand() < 0.4) add(18 + Math.floor(rand() * 8), 'CB FNAC', -between(12, 40), 'cat-divertissement');
     // Quelques opérations non catégorisées, pour tester la suggestion de règle
@@ -74,7 +76,29 @@ export function generateDemoMovements(today: ISODate, accountId: string, transfe
   return moves;
 }
 
-export async function loadDemo(database: BudgetDB = db): Promise<{ transactions: number; movements: number }> {
+/** Placements fictifs : achats programmés de BTC et d'un ETF Monde sur le PEA. */
+export function generateDemoInvestments(today: ISODate): { investments: Investment[]; ops: InvestmentOperation[]; goals: SavingsGoal[] } {
+  const btc: Investment = { id: 'demo-btc', name: 'Bitcoin', envelope: 'crypto', symbol: 'bitcoin', priceSource: 'coingecko', color: '#eda100', isDemo: true };
+  const etf: Investment = { id: 'demo-cw8', name: 'Amundi MSCI World (CW8)', envelope: 'pea', symbol: 'CW8.PA', priceSource: 'yahoo', color: '#2a78d6', isDemo: true };
+  const ops: InvestmentOperation[] = [];
+  const months = lastMonths(monthOf(today), 8);
+  months.forEach((m, k) => {
+    const date = `${m}-15`;
+    if (date > today) return;
+    // Cours fictifs proches des cours réels, pour que les quantités soient réalistes
+    const btcPrice = 52000 + k * 600;
+    const etfPrice = 640 + k * 5;
+    ops.push({ id: newId(), investmentId: btc.id, date, kind: 'buy', amount: 2500, quantity: Math.round((25 / btcPrice) * 1e8) / 1e8, isDemo: true });
+    ops.push({ id: newId(), investmentId: etf.id, date, kind: 'buy', amount: 5000, quantity: Math.round((50 / etfPrice) * 1e4) / 1e4, isDemo: true });
+  });
+  const goals: SavingsGoal[] = [
+    { id: 'demo-goal-precaution', name: 'Épargne de précaution', icon: '🛟', target: 300000, sources: [], manualAmount: 120000, monthlyContribution: 10000, annualReturn: 0, isDemo: true },
+    { id: 'demo-goal-btc', name: '1 000 € en bitcoin', icon: '₿', target: 100000, sources: [{ kind: 'investment', id: btc.id }], manualAmount: 0, monthlyContribution: 2500, annualReturn: 0, isDemo: true },
+  ];
+  return { investments: [btc, etf], ops, goals };
+}
+
+export async function loadDemo(database: BudgetDB = db): Promise<{ transactions: number; movements: number; investments: number }> {
   await clearDemo(database);
   const today = todayISO();
   const rules = await database.rules.toArray();
@@ -83,17 +107,21 @@ export async function loadDemo(database: BudgetDB = db): Promise<{ transactions:
   const loan = account?.fundedByLoanId ? await database.loans.get(account.fundedByLoanId) : undefined;
   const transactions = generateDemoTransactions(today, rules);
   const movements = account ? generateDemoMovements(today, account.id, settings?.transferDay ?? 1, account.rates ?? settings?.livretARates, loan?.startDate) : [];
-  await database.transaction('rw', database.transactions, database.savingsMovements, async () => {
+  const inv = generateDemoInvestments(today);
+  await database.transaction('rw', [database.transactions, database.savingsMovements, database.investments, database.investmentOps, database.goals], async () => {
     await database.transactions.bulkAdd(transactions);
     await database.savingsMovements.bulkAdd(movements);
+    await database.investments.bulkAdd(inv.investments);
+    await database.investmentOps.bulkAdd(inv.ops);
+    await database.goals.bulkAdd(inv.goals);
   });
-  return { transactions: transactions.length, movements: movements.length };
+  return { transactions: transactions.length, movements: movements.length, investments: inv.investments.length };
 }
 
 /** Supprime toutes les données marquées « démo », dans toutes les tables. */
 export async function clearDemo(database: BudgetDB = db): Promise<number> {
   let count = 0;
-  const tables = [database.transactions, database.savingsMovements, database.categories, database.rules, database.savingsAccounts, database.loans];
+  const tables = [database.transactions, database.savingsMovements, database.categories, database.rules, database.savingsAccounts, database.loans, database.investments, database.investmentOps, database.goals];
   await database.transaction('rw', tables, async () => {
     for (const t of tables) count += await (t as typeof database.transactions).filter((r) => r.isDemo === true).delete();
   });
@@ -101,5 +129,8 @@ export async function clearDemo(database: BudgetDB = db): Promise<number> {
 }
 
 export async function countDemo(database: BudgetDB = db): Promise<number> {
-  return (await database.transactions.filter((t) => t.isDemo === true).count()) + (await database.savingsMovements.filter((m) => m.isDemo === true).count());
+  const counts = await Promise.all(
+    [database.transactions, database.savingsMovements, database.investments, database.investmentOps, database.goals].map((t) => (t as typeof database.transactions).filter((r) => r.isDemo === true).count()),
+  );
+  return counts.reduce((a, b) => a + b, 0);
 }

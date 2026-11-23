@@ -26,6 +26,8 @@ export interface Settings {
   livretACeiling: Cents;
   /** Historique des taux du Livret A (le LDDS suit le même taux). */
   livretARates: RatePeriod[];
+  /** Mise à jour automatique des cours (seuls les symboles sont envoyés, jamais les montants). */
+  autoPrices: boolean;
 }
 
 export type CategoryKind = 'expense' | 'income' | 'savings';
@@ -130,4 +132,69 @@ export interface SavingsMovement {
   label: string;
   kind?: 'deposit' | 'withdrawal' | 'interest';
   isDemo?: boolean;
+}
+
+/* ───────────── Épargne & investissement (version 2 de la base) ───────────── */
+
+export type InvestmentEnvelope = 'pea' | 'cto' | 'crypto' | 'assuranceVie' | 'per' | 'other';
+
+/** Un placement : un ETF dans un PEA, du bitcoin, un fonds euros d'assurance-vie… */
+export interface Investment {
+  id: string;
+  name: string;
+  envelope: InvestmentEnvelope;
+  /** Symbole Yahoo (« CW8.PA ») ou identifiant CoinGecko (« bitcoin »). */
+  symbol?: string;
+  /** D'où vient le cours : automatique (Yahoo / CoinGecko) ou valorisation saisie à la main. */
+  priceSource: 'yahoo' | 'coingecko' | 'manual';
+  color: string;
+  isDemo?: boolean;
+}
+
+export interface InvestmentOperation {
+  id: string;
+  investmentId: string;
+  date: ISODate;
+  /** Achat, vente, ou valorisation (valeur totale constatée, pour les placements sans cours). */
+  kind: 'buy' | 'sell' | 'valuation';
+  /** Nombre de parts / de BTC (achats et ventes de placements cotés). */
+  quantity?: number;
+  /** Montant payé, reçu, ou valeur totale (valorisation). Toujours positif. */
+  amount: Cents;
+  note?: string;
+  isDemo?: boolean;
+}
+
+/** Dernier cours connu (cache local). id = « yahoo:CW8.PA » ou « coingecko:bitcoin ». */
+export interface PriceQuote {
+  id: string;
+  /** Prix d'une unité, en euros. */
+  price: number;
+  fetchedAt: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  icon: string;
+  target: Cents;
+  deadline?: ISODate;
+  /** Placements et livrets dont la valeur compte pour l'objectif. Vide = montant saisi à la main. */
+  sources: { kind: 'investment' | 'savings'; id: string }[];
+  manualAmount: Cents;
+  monthlyContribution: Cents;
+  /** Rendement annuel supposé (0 pour un livret à taux faible). */
+  annualReturn: number;
+  isDemo?: boolean;
+}
+
+/** Scénario du simulateur d'intérêts composés. */
+export interface SimScenario {
+  id: string;
+  name: string;
+  initial: Cents;
+  monthly: Cents;
+  years: number;
+  annualReturn: number;
+  color: string;
 }

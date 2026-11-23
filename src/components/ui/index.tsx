@@ -5,10 +5,10 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 export function Card({ title, actions, children, className }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx('rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900', className)}>
+    <section className={cx('rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900', className)}>
       {(title || actions) && (
-        <header className="mb-3 flex items-center justify-between gap-2">
-          {title && <h2 className="text-base font-semibold">{title}</h2>}
+        <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          {title && <h2 className="text-lg font-semibold">{title}</h2>}
           {actions && <div className="flex gap-2">{actions}</div>}
         </header>
       )}
@@ -21,7 +21,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-bold">{title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -43,8 +43,8 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
       type="button"
       {...props}
       className={cx(
-        'inline-flex items-center justify-center gap-1 rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        size === 'sm' ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm',
+        'inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-4 py-2 text-sm',
         variants[variant],
         className,
       )}
@@ -53,7 +53,7 @@ export function Button({ variant = 'secondary', size = 'md', className, ...props
 }
 
 const fieldClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800';
+  'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-800';
 
 export function Field({ label, hint, children, className }: { label: ReactNode; hint?: ReactNode; children: ReactNode; className?: string }) {
   return (
@@ -132,11 +132,14 @@ export function ProgressBar({ ratio, status }: { ratio: number; status: 'ok' | '
   );
 }
 
-export function Stat({ label, value, tone, hint }: { label: string; value: ReactNode; tone?: 'positive' | 'negative' | 'neutral'; hint?: ReactNode }) {
+export function Stat({ label, value, tone, hint, icon }: { label: string; value: ReactNode; tone?: 'positive' | 'negative' | 'neutral'; hint?: ReactNode; icon?: string }) {
   const toneClass = tone === 'positive' ? 'text-emerald-600 dark:text-emerald-400' : tone === 'negative' ? 'text-red-600 dark:text-red-400' : '';
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div className="text-sm text-slate-500 dark:text-slate-400">{label}</div>
+    <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+        {icon && <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-base dark:bg-slate-800" aria-hidden>{icon}</span>}
+        {label}
+      </div>
       <div className={cx('mt-1 text-2xl font-bold', toneClass)}>{value}</div>
       {hint && <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</div>}
     </div>
@@ -167,7 +170,7 @@ export function Modal({ open, title, onClose, children }: { open: boolean; title
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-5 shadow-xl dark:bg-slate-900"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -181,7 +184,7 @@ export function Modal({ open, title, onClose, children }: { open: boolean; title
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">{children}</div>;
+  return <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">{children}</div>;
 }
 
 export function ColorDot({ color, size = 10 }: { color: string; size?: number }) {
@@ -195,5 +198,22 @@ export function Table({ children }: { children: ReactNode }) {
         {children}
       </table>
     </div>
+  );
+}
+
+/** Petite étiquette (ex. « PEA », « Crypto »). */
+export function Badge({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cx('inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300', className)}>{children}</span>;
+}
+
+/** Montant de gain / perte coloré avec flèche (la couleur n'est jamais le seul indice). */
+export function GainText({ cents, ratio, format }: { cents: number; ratio?: number; format: (c: number, o?: { sign?: boolean }) => string }) {
+  const up = cents > 0;
+  const down = cents < 0;
+  return (
+    <span className={cx('font-medium', up && 'text-emerald-600 dark:text-emerald-400', down && 'text-red-600 dark:text-red-400')}>
+      {up ? '▲' : down ? '▼' : '•'} {format(cents, { sign: true })}
+      {ratio !== undefined && ratio !== 0 && <span className="ml-1 text-xs">({(ratio * 100).toLocaleString('fr-FR', { maximumFractionDigits: 1, signDisplay: 'always' })} %)</span>}
+    </span>
   );
 }

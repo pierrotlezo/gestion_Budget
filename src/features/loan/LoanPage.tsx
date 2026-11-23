@@ -10,7 +10,6 @@ import { chartChrome } from '../../app/chartTheme';
 import { useIsDark } from '../../app/theme';
 import { Alert, Button, Card, Field, Input, MoneyInput, PageHeader, PercentInput, Select, Stat, Table } from '../../components/ui';
 import { ChartTooltip } from '../../components/ChartTooltip';
-import { ComparisonCard } from './ComparisonCard';
 
 export function LoanPage() {
   const loans = useLoans();
@@ -103,8 +102,6 @@ function LoanView({ loan, canDelete }: { loan: Loan; canDelete: boolean }) {
         <Stat label="Intérêts déjà payés" value={formatEUR(summary.interestToDate)} hint={draft.deferral.type === 'total' ? 'Capitalisés (ajoutés au capital)' : summary.insuranceToDate ? `+ ${formatEUR(summary.insuranceToDate)} d'assurance` : undefined} />
         <Stat label="Coût total du crédit" value={formatEUR(summary.totalCost)} hint={`${formatEUR(summary.totalInterest)} d'intérêts + ${formatEUR(summary.totalInsurance)} d'assurance · fin le ${summary.endDate ? formatDateFR(summary.endDate) : '—'}`} />
       </div>
-
-      <ComparisonCard />
 
       <CapitalChart schedule={schedule} startDate={draft.startDate} principal={draft.principal} />
       <ScheduleTable schedule={schedule} rate={draft.annualRate} />

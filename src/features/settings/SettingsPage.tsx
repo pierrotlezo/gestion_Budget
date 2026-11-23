@@ -31,7 +31,7 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title="Paramètres" subtitle="Montants mensuels, Livret A et affichage." />
+      <PageHeader title="Paramètres" subtitle="Montants mensuels, Livret A, cours et affichage." />
       <div className="space-y-4">
         <Card title="Revenus mensuels">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -68,6 +68,18 @@ export function SettingsPage() {
           <p className="mt-3 text-xs text-slate-500">
             Le taux est révisé le 1er février et le 1er août. Ajoute chaque nouveau taux avec sa date d'effet : les intérêts de chaque quinzaine sont calculés avec le taux en vigueur à cette date.
           </p>
+        </Card>
+
+        <Card title="Cours des placements">
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" className="mt-1" checked={draft.autoPrices} onChange={(e) => set('autoPrices', e.target.checked)} />
+            <span>
+              Mettre à jour automatiquement les cours (bitcoin, ETF…) à l'ouverture de l'application
+              <span className="block text-xs text-slate-500">
+                Seuls les symboles des placements (ex. « CW8.PA », « bitcoin ») sont envoyés à Yahoo Finance et CoinGecko, via HTTPS. Jamais tes montants ni tes quantités. Désactivé : les cours ne sont mis à jour que quand tu cliques sur « Actualiser ».
+              </span>
+            </span>
+          </label>
         </Card>
 
         <Card title="Affichage">

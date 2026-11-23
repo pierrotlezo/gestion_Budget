@@ -35,6 +35,7 @@ describe('données de démonstration', () => {
     expect(tx.find((t) => t.label.includes('NETFLIX'))?.categoryId).toBe('cat-abonnements');
     expect(tx.find((t) => t.label.includes('LOYER'))?.categoryId).toBe('cat-loyer');
     expect(tx.some((t) => t.categoryId === null)).toBe(true);
+    expect(tx.filter((t) => t.label.includes('COINBASE')).every((t) => t.categoryId === 'cat-epargne')).toBe(true);
   });
 
   it('se charge et s’efface sans toucher aux vraies données', async () => {
@@ -43,7 +44,13 @@ describe('données de démonstration', () => {
     const r = await loadDemo(d);
     expect(r.transactions).toBeGreaterThan(100);
     expect(r.movements).toBeGreaterThan(5);
-    expect(await countDemo(d)).toBe(r.transactions + r.movements);
+    expect(r.investments).toBe(2);
+    expect(await d.investmentOps.count()).toBeGreaterThan(10);
+    expect(await d.goals.count()).toBe(2);
+    await clearDemo(d);
+    expect(await d.investments.count()).toBe(0);
+    expect(await d.investmentOps.count()).toBe(0);
+    await loadDemo(d);
     await clearDemo(d);
     expect(await countDemo(d)).toBe(0);
     expect(await d.transactions.count()).toBe(1);

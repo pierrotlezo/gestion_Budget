@@ -34,7 +34,7 @@ export function DataPage() {
       const raw = JSON.parse(await file.text());
       if (!confirm('Restaurer cette sauvegarde ? TOUTES les données actuelles seront remplacées.')) return;
       const counts = await importAll(db, raw);
-      setMessage({ tone: 'success', text: `Sauvegarde restaurée : ${counts.transactions} transaction(s), ${counts.categories} catégorie(s), ${counts.savingsMovements} mouvement(s) d'épargne.` });
+      setMessage({ tone: 'success', text: `Sauvegarde restaurée : ${counts.transactions} transaction(s), ${counts.categories} catégorie(s), ${counts.savingsMovements} mouvement(s) d'épargne, ${counts.investments} placement(s).` });
     } catch (e) {
       setMessage({ tone: 'danger', text: e instanceof SyntaxError ? 'Le fichier n\'est pas un JSON valide.' : (e as Error).message });
     }
@@ -76,10 +76,10 @@ export function DataPage() {
 
         <Card title="Données de démonstration">
           <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-            12 mois de transactions fictives et des mouvements sur le Livret A, pour découvrir l'application. Elles sont marquées « démo » et s'effacent sans toucher à tes vraies données.
+            12 mois de transactions fictives, des mouvements sur le Livret A, deux placements (bitcoin, ETF Monde) et deux objectifs, pour découvrir l'application. Elles sont marquées « démo » et s'effacent sans toucher à tes vraies données.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={async () => { const r = await loadDemo(); setMessage({ tone: 'success', text: `Démo chargée : ${r.transactions} transactions et ${r.movements} mouvements d'épargne.` }); }}>
+            <Button onClick={async () => { const r = await loadDemo(); setMessage({ tone: 'success', text: `Démo chargée : ${r.transactions} transactions, ${r.movements} mouvements d'épargne, ${r.investments} placements et 2 objectifs.` }); }}>
               ✨ {demoCount > 0 ? 'Recharger' : 'Charger'} la démo
             </Button>
             <Button variant="danger" disabled={demoCount === 0} onClick={async () => { const n = await clearDemo(); setMessage({ tone: 'success', text: `${n} élément(s) de démonstration effacé(s).` }); }}>

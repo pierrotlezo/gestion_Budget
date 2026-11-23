@@ -245,7 +245,7 @@ export function CsvImportPage() {
               <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Ex. Ma banque" />
             </Field>
             <Button variant="primary" onClick={doImport} disabled={busy || newCount === 0}>Importer {newCount} transaction(s)</Button>
-            {result && <Button onClick={() => navigate('/transactions')}>Voir les transactions →</Button>}
+            {result && <Button onClick={() => navigate('/depenses')}>Voir les transactions →</Button>}
           </div>
           {result && <div className="mt-3"><Alert tone="success">{result}</Alert></div>}
         </Card>
