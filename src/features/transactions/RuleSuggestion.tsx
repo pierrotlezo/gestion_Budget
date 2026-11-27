@@ -15,7 +15,7 @@ export function useRuleSuggestion() {
   const [target, setTarget] = useState<Transaction | null>(null);
   const propose = (t: Transaction) => {
     if (!t.categoryId) return;
-    const covered = rules.some((r) => r.categoryId === t.categoryId && ruleMatches(r, t.label));
+    const covered = rules.some((r) => r.categoryId === t.categoryId && ruleMatches(r, t.label, t.amount));
     if (!covered) setTarget(t);
   };
   const dialog = target ? <RuleSuggestionDialog transaction={target} onClose={() => setTarget(null)} /> : null;
@@ -28,16 +28,20 @@ function RuleSuggestionDialog({ transaction, onClose }: { transaction: Transacti
   const [pattern, setPattern] = useState(suggestPattern(transaction.label));
   const [others, setOthers] = useState<Transaction[]>([]);
   const [applyToOthers, setApplyToOthers] = useState(true);
+  // Par défaut, la règle ne vaut que dans le même sens (ex. un virement reçu de toi ≠ un virement envoyé à toi)
+  const incoming = transaction.amount > 0;
+  const [sameDirection, setSameDirection] = useState(true);
+  const direction = sameDirection ? (incoming ? 'in' : 'out') : undefined;
 
   useEffect(() => {
     let alive = true;
     const p = pattern.trim();
     if (p.length < 2) return setOthers([]);
-    findMatching(p, transaction.categoryId!, transaction.id).then((r) => alive && setOthers(r));
+    findMatching(p, transaction.categoryId!, transaction.id, direction).then((r) => alive && setOthers(r));
     return () => {
       alive = false;
     };
-  }, [pattern, transaction]);
+  }, [pattern, transaction, direction]);
 
   return (
     <Modal open title="Créer une règle ?" onClose={onClose}>
@@ -47,6 +51,10 @@ function RuleSuggestionDialog({ transaction, onClose }: { transaction: Transacti
       <Field label="Texte recherché" hint={`Libellé d'origine : ${transaction.label}`} className="mb-3">
         <Input value={pattern} onChange={(e) => setPattern(e.target.value)} autoFocus />
       </Field>
+      <label className="mb-3 flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={sameDirection} onChange={(e) => setSameDirection(e.target.checked)} />
+        Seulement pour les {incoming ? 'entrées d\'argent (virements reçus…)' : 'sorties d\'argent (paiements, virements envoyés…)'}
+      </label>
       {others.length > 0 && (
         <label className="mb-3 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={applyToOthers} onChange={(e) => setApplyToOthers(e.target.checked)} />
@@ -59,7 +67,7 @@ function RuleSuggestionDialog({ transaction, onClose }: { transaction: Transacti
           variant="primary"
           disabled={pattern.trim().length < 2}
           onClick={async () => {
-            await createRule(pattern, transaction.categoryId!);
+            await createRule(pattern, transaction.categoryId!, direction);
             if (applyToOthers && others.length) {
               await db.transactions.bulkUpdate(others.map((t) => ({ key: t.id, changes: { categoryId: transaction.categoryId } })));
             }

@@ -75,3 +75,26 @@ describe('horodatage pour la synchro (version 4)', () => {
     db.close();
   });
 });
+
+describe('migration version 4 → 5', () => {
+  it('ajoute les règles des enseignes courantes avec les mêmes identifiants qu’un nouvel appareil', async () => {
+    const old = new Dexie('test-migration-5');
+    old.version(4).stores({ settings: 'id', categories: 'id, order', transactions: 'id, date, categoryId, importHash', rules: 'id, priority', csvProfiles: 'id', loans: 'id', savingsAccounts: 'id', savingsMovements: 'id, accountId, date', investments: 'id', investmentOps: 'id, investmentId, date', prices: 'id', goals: 'id', scenarios: 'id', tipStates: 'id' });
+    await old.table('settings').add(defaultSettings);
+    await old.table('rules').bulkAdd([
+      { id: 'perso', pattern: 'MA REGLE', match: 'contains', categoryId: 'cat-autre', priority: -10 },
+      { id: 'deja', pattern: 'IZLY', match: 'contains', categoryId: 'cat-autre', priority: 5 }, // déjà créée à la main : gardée telle quelle
+    ]);
+    old.close();
+    const db = new BudgetDB('test-migration-5');
+    const rules = await db.rules.toArray();
+    expect(rules.find((r) => r.id === 'perso')).toBeTruthy();
+    expect(rules.filter((r) => r.pattern === 'IZLY')).toHaveLength(1);
+    const cpam = rules.find((r) => r.pattern === 'CPAM')!;
+    expect(cpam).toMatchObject({ categoryId: 'cat-autres-revenus', direction: 'in' });
+    // Même identifiant que sur un appareil neuf
+    expect(defaultRules.find((r) => r.pattern === 'CPAM')!.id).toBe(cpam.id);
+    expect(new Set(defaultRules.map((r) => r.id)).size).toBe(defaultRules.length);
+    db.close();
+  });
+});

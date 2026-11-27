@@ -24,9 +24,9 @@ export async function importDrafts(drafts: DraftTransaction[]): Promise<{ import
 }
 
 /** Crée une règle prioritaire sur les règles existantes. */
-export async function createRule(pattern: string, categoryId: string): Promise<CategoryRule> {
+export async function createRule(pattern: string, categoryId: string, direction?: 'in' | 'out'): Promise<CategoryRule> {
   const first = await db.rules.orderBy('priority').first();
-  const rule: CategoryRule = { id: newId(), pattern: pattern.trim(), match: 'contains', categoryId, priority: (first?.priority ?? 0) - 10 };
+  const rule: CategoryRule = { id: newId(), pattern: pattern.trim(), match: 'contains', categoryId, priority: (first?.priority ?? 0) - 10, ...(direction ? { direction } : {}) };
   await db.rules.add(rule);
   return rule;
 }
@@ -38,7 +38,7 @@ export async function applyRules(onlyUncategorized = true): Promise<number> {
   await db.transaction('rw', db.transactions, async () => {
     const list = onlyUncategorized ? await db.transactions.filter((t) => !t.categoryId).toArray() : await db.transactions.toArray();
     for (const t of list) {
-      const cat = findCategoryForLabel(t.label, rules);
+      const cat = findCategoryForLabel(t.label, rules, t.amount);
       if (cat && cat !== t.categoryId) {
         await db.transactions.update(t.id, { categoryId: cat });
         count++;
@@ -48,8 +48,8 @@ export async function applyRules(onlyUncategorized = true): Promise<number> {
   return count;
 }
 
-/** Transactions (autres que `exceptId`) dont le libellé correspond au motif et qui ne sont pas dans `categoryId`. */
-export async function findMatching(pattern: string, categoryId: string, exceptId?: string) {
-  const rule: CategoryRule = { id: '', pattern, match: 'contains', categoryId, priority: 0 };
-  return db.transactions.filter((t) => t.id !== exceptId && t.categoryId !== categoryId && ruleMatches(rule, t.label)).toArray();
+/** Transactions (autres que `exceptId`) que la règle classerait et qui ne sont pas dans `categoryId`. */
+export async function findMatching(pattern: string, categoryId: string, exceptId?: string, direction?: 'in' | 'out') {
+  const rule: CategoryRule = { id: '', pattern, match: 'contains', categoryId, priority: 0, direction };
+  return db.transactions.filter((t) => t.id !== exceptId && t.categoryId !== categoryId && ruleMatches(rule, t.label, t.amount)).toArray();
 }

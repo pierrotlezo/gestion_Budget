@@ -20,7 +20,7 @@ export function TransactionForm({ initial, defaultCategoryId, onClose, onSaved }
 
   const onLabel = (v: string) => {
     setLabel(v);
-    if (!categoryTouched && !initial) setCategoryId(findCategoryForLabel(v, rules) ?? '');
+    if (!categoryTouched && !initial) setCategoryId(findCategoryForLabel(v, rules, direction === 'out' ? -1 : 1) ?? '');
   };
 
   const valid = date && amount > 0 && label.trim();

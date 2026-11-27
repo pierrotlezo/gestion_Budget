@@ -91,6 +91,8 @@ export interface CategoryRule extends Synced {
   categoryId: string;
   /** Plus petit = testé en premier. */
   priority: number;
+  /** Ne s'applique qu'aux entrées (« in ») ou aux sorties (« out ») d'argent. Absent = les deux. */
+  direction?: 'in' | 'out';
   isDemo?: boolean;
 }
 
@@ -104,6 +106,8 @@ export interface CsvProfile extends Synced {
   name: string;
   delimiter: string;
   skipRows: number;
+  /** La première ligne contient-elle le nom des colonnes ? (non pour LCL) */
+  hasHeader?: boolean;
   dateColumn: string;
   dateFormat: DateFormat;
   labelColumns: string[];

@@ -32,11 +32,18 @@ export interface CsvTable {
   rows: string[][];
 }
 
-/** Découpe le texte CSV. La première ligne après `skipRows` sert d'en-têtes. */
-export function parseCsvTable(text: string, delimiter: string, skipRows = 0): CsvTable {
+/**
+ * Découpe le texte CSV. Si `hasHeader`, la première ligne après `skipRows` donne le nom des colonnes ;
+ * sinon (relevés LCL…), les colonnes s'appellent « Colonne 1 », « Colonne 2 »…
+ */
+export function parseCsvTable(text: string, delimiter: string, skipRows = 0, hasHeader = true): CsvTable {
   const lines = text.split(/\r?\n/).slice(skipRows).join('\n');
   const res = Papa.parse<string[]>(lines, { delimiter, skipEmptyLines: 'greedy' });
   const data = res.data.map((r) => r.map((c) => (c ?? '').trim()));
+  if (!hasHeader) {
+    const width = Math.max(0, ...data.map((r) => r.length));
+    return { headers: Array.from({ length: width }, (_, i) => `Colonne ${i + 1}`), rows: data };
+  }
   const rawHeaders = data[0] ?? [];
   // En-têtes uniques et non vides (sinon impossible de les sélectionner)
   const seen = new Map<string, number>();
@@ -75,6 +82,74 @@ export function guessMapping(headers: string[]): Partial<CsvProfile> {
   };
 }
 
+/** La ligne ressemble-t-elle à une opération (une date et un montant) plutôt qu'à des titres de colonnes ? */
+function looksLikeData(row: string[]): boolean {
+  return row.some((c) => parseDate(c) !== null) && row.some((c) => /\d/.test(c) && parseAmount(c) !== null && parseDate(c) === null);
+}
+
+/** Devine les colonnes d'après leur contenu (pour les fichiers sans en-tête). */
+export function guessMappingFromContent(table: CsvTable): Partial<CsvProfile> {
+  const rows = table.rows.filter((r) => r.length === table.headers.length).slice(0, 50);
+  const ratio = (i: number, test: (c: string) => boolean) => {
+    const filled = rows.map((r) => r[i] ?? '').filter((c) => c !== '');
+    return filled.length ? filled.filter(test).length / rows.length : 0;
+  };
+  const cols = table.headers.map((_, i) => i);
+  const dateI = cols.find((i) => ratio(i, (c) => parseDate(c) !== null) > 0.8) ?? 0;
+  const amountI = cols.find((i) => i !== dateI && ratio(i, (c) => parseAmount(c) !== null && /\d/.test(c)) > 0.8) ?? 1;
+  // Libellés : colonnes de texte assez longues (le type « Carte » ou la catégorie « Divers » sont trop courts)
+  const labelIs = cols.filter((i) => {
+    if (i === dateI || i === amountI) return false;
+    const filled = rows.map((r) => r[i] ?? '').filter((c) => c !== '' && parseAmount(c) === null);
+    return filled.length > 0 && filled.reduce((s, c) => s + c.length, 0) / filled.length >= 10;
+  });
+  return {
+    dateColumn: table.headers[dateI],
+    labelColumns: (labelIs.length ? labelIs : [cols.find((i) => i !== dateI && i !== amountI) ?? 2]).map((i) => table.headers[i]),
+    amount: { mode: 'single', column: table.headers[amountI] },
+  };
+}
+
+/** Formats de banques reconnus automatiquement (données : on peut en ajouter). */
+export const BANK_FORMATS: { name: string; detect: (rows: string[][]) => boolean; mapping: Omit<CsvProfile, 'id' | 'name' | 'encoding' | 'skipRows'> }[] = [
+  {
+    // LCL : pas d'en-tête ; 1re et dernière lignes = solde ; Date;Montant;Type;…;Libellé (carte);Libellé (virement);…;Catégorie LCL
+    name: 'LCL',
+    detect: (rows) => {
+      const ops = rows.filter((r) => r.length === 8 && parseDate(r[0]) !== null);
+      return ops.length > 0 && ops.length >= rows.length - 3 && ops.every((r) => /^(Carte|Virement|Prélèvement|Prelevement|Chèque|Cheque|Remise|Retrait|Frais|)$/i.test(r[2]));
+    },
+    mapping: { delimiter: ';', hasHeader: false, dateColumn: 'Colonne 1', dateFormat: 'DD/MM/YYYY', labelColumns: ['Colonne 5', 'Colonne 6'], amount: { mode: 'single', column: 'Colonne 2' }, decimalSeparator: ',' },
+  },
+];
+
+export interface DetectedFormat {
+  mapping: Omit<CsvProfile, 'id' | 'name'>;
+  /** Nom de la banque si le format est connu. */
+  bank: string | null;
+}
+
+/** Analyse un relevé et propose la correspondance des colonnes. */
+export function detectFormat(text: string, encoding: string): DetectedFormat {
+  const delimiter = detectDelimiter(text);
+  const raw = Papa.parse<string[]>(text, { delimiter, skipEmptyLines: 'greedy' }).data.map((r) => r.map((c) => (c ?? '').trim()));
+  for (const f of BANK_FORMATS) {
+    if (f.mapping.delimiter === delimiter && f.detect(raw)) return { bank: f.name, mapping: { ...f.mapping, encoding, skipRows: 0 } };
+  }
+  // Lignes d'introduction (nom du compte…) : on part de la première ligne qui a le nombre de colonnes maximal
+  const lines = text.split(/\r?\n/);
+  const maxCols = Math.max(...lines.slice(0, 30).map((l) => l.split(delimiter).length));
+  const skipRows = Math.max(0, lines.findIndex((l) => l.split(delimiter).length === maxCols));
+  const first = parseCsvTable(text, delimiter, skipRows, false).rows[0] ?? [];
+  const hasHeader = !looksLikeData(first);
+  const table = parseCsvTable(text, delimiter, skipRows, hasHeader);
+  const guess = hasHeader ? guessMapping(table.headers) : guessMappingFromContent(table);
+  return {
+    bank: null,
+    mapping: { encoding, delimiter, skipRows, hasHeader, dateColumn: guess.dateColumn!, dateFormat: 'DD/MM/YYYY', labelColumns: guess.labelColumns!, amount: guess.amount!, decimalSeparator: ',' },
+  };
+}
+
 export interface DraftTransaction {
   line: number;
   date: ISODate;
@@ -87,9 +162,11 @@ export interface DraftTransaction {
 export interface MappingResult {
   drafts: DraftTransaction[];
   errors: { line: number; message: string }[];
+  /** Lignes ignorées car incomplètes (ex. lignes de solde en début et fin de relevé LCL). */
+  skipped: number;
 }
 
-type Mapping = Pick<CsvProfile, 'dateColumn' | 'dateFormat' | 'labelColumns' | 'amount' | 'decimalSeparator'>;
+type Mapping = Pick<CsvProfile, 'dateColumn' | 'dateFormat' | 'labelColumns' | 'amount' | 'decimalSeparator' | 'hasHeader'>;
 
 /** Transforme les lignes du CSV en transactions prêtes à importer (+ liste des lignes en erreur). */
 export function mapRows(table: CsvTable, mapping: Mapping, rules: CategoryRule[] = []): MappingResult {
@@ -98,10 +175,18 @@ export function mapRows(table: CsvTable, mapping: Mapping, rules: CategoryRule[]
   const labelIs = mapping.labelColumns.map(idx).filter((i) => i >= 0);
   const drafts: DraftTransaction[] = [];
   const errors: MappingResult['errors'] = [];
+  let skipped = 0;
+  const width = table.headers.length;
+  const offset = mapping.hasHeader === false ? 1 : 2; // numéro de ligne dans le fichier (sans compter les lignes sautées)
 
   table.rows.forEach((row, i) => {
-    const line = i + 2; // +1 pour l'en-tête, +1 car les lignes commencent à 1
+    const line = i + offset;
     if (row.every((c) => c === '')) return;
+    // Ligne nettement plus courte que les autres : ligne de solde ou de total, pas une opération
+    if (width >= 5 && row.length < width * 0.75) {
+      skipped++;
+      return;
+    }
     const date = dateI >= 0 ? parseDate(row[dateI] ?? '', mapping.dateFormat) : null;
     if (!date) return errors.push({ line, message: `Date illisible : « ${row[dateI] ?? ''} »` });
 
@@ -117,10 +202,10 @@ export function mapRows(table: CsvTable, mapping: Mapping, rules: CategoryRule[]
     if (amount === 0) return;
 
     const label = labelIs.map((j) => row[j]).filter(Boolean).join(' ').replace(/\s+/g, ' ').trim() || '(sans libellé)';
-    drafts.push({ line, date, amount, label, categoryId: findCategoryForLabel(label, rules), importHash: '' });
+    drafts.push({ line, date, amount, label, categoryId: findCategoryForLabel(label, rules, amount), importHash: '' });
   });
 
-  return { drafts: withImportHashes(drafts), errors };
+  return { drafts: withImportHashes(drafts), errors, skipped };
 }
 
 /**

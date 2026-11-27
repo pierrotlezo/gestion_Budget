@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { db, newId } from '../../../db/db';
 import type { CsvProfile } from '../../../db/schema';
 import { useCategories, useRules } from '../../../hooks/data';
-import { decodeFile, detectDelimiter, guessMapping, mapRows, parseCsvTable } from '../../../domain/csv/parse';
-import { formatDateFR } from '../../../domain/dates';
+import { decodeFile, detectFormat, mapRows, parseCsvTable } from '../../../domain/csv/parse';
+import { formatDateFR, monthOf } from '../../../domain/dates';
 import { formatEUR } from '../../../domain/money';
 import { Alert, Button, Card, Field, Input, PageHeader, Select, Table } from '../../../components/ui';
 import { importDrafts } from '../transactionService';
@@ -19,7 +19,6 @@ const DELIMITERS = [
 ];
 
 export function CsvImportPage() {
-  const navigate = useNavigate();
   const rules = useRules();
   const categories = useCategories();
   const profiles = useLiveQuery(() => db.csvProfiles.toArray(), []) ?? [];
@@ -27,11 +26,14 @@ export function CsvImportPage() {
   const [buffer, setBuffer] = useState<ArrayBuffer | null>(null);
   const [mapping, setMapping] = useState<Mapping | null>(null);
   const [profileName, setProfileName] = useState('');
-  const [result, setResult] = useState<string>('');
+  const [result, setResult] = useState<{ imported: number; duplicates: number; sorted: number; toSort: number; month: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bank, setBank] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState('');
 
   const text = useMemo(() => (buffer && mapping ? decodeFile(buffer, mapping.encoding).text : ''), [buffer, mapping?.encoding]);
-  const table = useMemo(() => (mapping && text ? parseCsvTable(text, mapping.delimiter, mapping.skipRows) : null), [text, mapping?.delimiter, mapping?.skipRows]);
+  const table = useMemo(() => (mapping && text ? parseCsvTable(text, mapping.delimiter, mapping.skipRows, mapping.hasHeader !== false) : null), [text, mapping?.delimiter, mapping?.skipRows, mapping?.hasHeader]);
   const mapped = useMemo(() => (table && mapping ? mapRows(table, mapping, rules) : null), [table, mapping, rules]);
   const existing = useLiveQuery(async () => {
     if (!mapped) return new Set<string>();
@@ -40,28 +42,20 @@ export function CsvImportPage() {
   }, [mapped]);
 
   const onFile = async (file: File) => {
+    setError('');
+    if (!/\.(csv|txt)$/i.test(file.name) && !file.type.includes('csv') && !file.type.startsWith('text/')) {
+      setError(`« ${file.name} » n'est pas un fichier CSV. Sur le site de ta banque, choisis l'export au format CSV.`);
+      return;
+    }
     const buf = await file.arrayBuffer();
     const { text, encoding } = decodeFile(buf);
-    const delimiter = detectDelimiter(text);
-    // Saute les lignes d'introduction (nom du compte…) : on cherche la première ligne avec assez de colonnes
-    const lines = text.split(/\r?\n/);
-    const maxCols = Math.max(...lines.slice(0, 30).map((l) => l.split(delimiter).length));
-    const skipRows = Math.max(0, lines.findIndex((l) => l.split(delimiter).length === maxCols));
-    const headers = parseCsvTable(text, delimiter, skipRows).headers;
-    const guess = guessMapping(headers);
+    // Format reconnu automatiquement (LCL…) ou deviné d'après le contenu
+    const detected = detectFormat(text, encoding);
     setFileName(file.name);
     setBuffer(buf);
-    setResult('');
-    setMapping({
-      encoding,
-      delimiter,
-      skipRows,
-      dateColumn: guess.dateColumn!,
-      dateFormat: 'DD/MM/YYYY',
-      labelColumns: guess.labelColumns!,
-      amount: guess.amount!,
-      decimalSeparator: ',',
-    });
+    setResult(null);
+    setBank(detected.bank);
+    setMapping(detected.mapping);
   };
 
   const applyProfile = (id: string) => {
@@ -81,9 +75,14 @@ export function CsvImportPage() {
       const same = profiles.find((p) => p.name === profileName.trim());
       await db.csvProfiles.put({ ...mapping, id: same?.id ?? newId(), name: profileName.trim() });
     }
+    const fresh = mapped.drafts.filter((d) => !existing?.has(d.importHash));
     const r = await importDrafts(mapped.drafts);
     setBusy(false);
-    setResult(`${r.imported} transaction(s) importée(s)${r.duplicates ? `, ${r.duplicates} doublon(s) ignoré(s)` : ''}.`);
+    // Mois qui contient le plus d'opérations à trier (pour y aller directement)
+    const byMonth = new Map<string, number>();
+    for (const d of fresh) if (!d.categoryId) byMonth.set(monthOf(d.date), (byMonth.get(monthOf(d.date)) ?? 0) + 1);
+    const month = [...byMonth.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? monthOf(fresh[0]?.date ?? mapped.drafts[0].date);
+    setResult({ imported: r.imported, duplicates: r.duplicates, sorted: fresh.filter((d) => d.categoryId).length, toSort: fresh.filter((d) => !d.categoryId).length, month });
   };
 
   const catName = (id: string | null) => (id ? categories.find((c) => c.id === id)?.name : null);
@@ -94,28 +93,41 @@ export function CsvImportPage() {
     <div>
       <PageHeader title="Importer un relevé CSV" subtitle="Le fichier est lu dans le navigateur : il n'est envoyé nulle part." />
 
-      <Card title="1. Fichier" className="mb-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Relevé bancaire (.csv)">
-            <Input type="file" accept=".csv,.txt,text/csv" onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+      <Card title="1. Ton relevé" className="mb-4">
+        <label
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) onFile(f); }}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-8 text-center transition ${dragging ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40' : 'border-slate-300 hover:border-indigo-400 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50'}`}
+        >
+          <span className="text-4xl" aria-hidden>📥</span>
+          <span className="font-semibold">{fileName ? `📄 ${fileName}` : 'Dépose ton relevé CSV ici'}</span>
+          <span className="text-sm text-slate-500">{fileName ? 'ou clique pour choisir un autre fichier' : 'ou clique pour le choisir (LCL, Crédit Agricole, Boursorama… export CSV)'}</span>
+          <input type="file" accept=".csv,.txt,text/csv" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onFile(f); }} />
+        </label>
+        {error && <div className="mt-3"><Alert tone="danger">{error}</Alert></div>}
+        {bank && <div className="mt-3"><Alert tone="success">✅ Format <strong>{bank}</strong> reconnu : les colonnes sont réglées automatiquement.</Alert></div>}
+        {fileName && !bank && mapping && <div className="mt-3"><Alert tone="info">Vérifie la correspondance des colonnes ci-dessous (l'aperçu en bas montre le résultat).</Alert></div>}
+        {profiles.length > 0 && buffer && (
+          <Field label="Ou utiliser un format enregistré" className="mt-3 max-w-xs">
+            <Select defaultValue="" onChange={(e) => applyProfile(e.target.value)}>
+              <option value="">— Choisir —</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </Select>
           </Field>
-          {profiles.length > 0 && buffer && (
-            <Field label="Format enregistré">
-              <Select defaultValue="" onChange={(e) => applyProfile(e.target.value)}>
-                <option value="">— Choisir une banque —</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </Select>
-            </Field>
-          )}
-        </div>
-        {fileName && <p className="mt-2 text-xs text-slate-500">{fileName} · encodage détecté : {mapping?.encoding}</p>}
+        )}
       </Card>
 
       {mapping && table && (
-        <Card title="2. Correspondance des colonnes" className="mb-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <details open={!bank} className="mb-4 rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <summary className="cursor-pointer text-lg font-semibold">2. Correspondance des colonnes {bank && <span className="text-sm font-normal text-slate-500">(automatique, cliquer pour modifier)</span>}</summary>
+          <label className="mt-4 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={mapping.hasHeader !== false} onChange={(e) => set('hasHeader', e.target.checked)} />
+            La première ligne contient le nom des colonnes
+          </label>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Field label="Séparateur">
               <Select value={mapping.delimiter} onChange={(e) => set('delimiter', e.target.value)}>
                 {DELIMITERS.map((d) => (
@@ -205,11 +217,12 @@ export function CsvImportPage() {
               <tbody>{table.rows.slice(0, 5).map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>)}</tbody>
             </Table>
           </details>
-        </Card>
+        </details>
       )}
 
       {mapped && (
         <Card title="3. Aperçu et import">
+          {mapped.skipped > 0 && <p className="mb-2 text-sm text-slate-500">{mapped.skipped} ligne(s) de solde ou de total ignorée(s).</p>}
           {mapped.errors.length > 0 && (
             <div className="mb-3">
               <Alert tone="warning">
@@ -245,9 +258,23 @@ export function CsvImportPage() {
               <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} placeholder="Ex. Ma banque" />
             </Field>
             <Button variant="primary" onClick={doImport} disabled={busy || newCount === 0}>Importer {newCount} transaction(s)</Button>
-            {result && <Button onClick={() => navigate('/depenses')}>Voir les transactions →</Button>}
           </div>
-          {result && <div className="mt-3"><Alert tone="success">{result}</Alert></div>}
+          {result && (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900 dark:bg-emerald-950/30">
+              <div className="text-lg font-semibold">🎉 {result.imported} opération{result.imported > 1 ? 's' : ''} importée{result.imported > 1 ? 's' : ''}</div>
+              <div className="mt-1 text-sm">
+                ✅ {result.sorted} classée{result.sorted > 1 ? 's' : ''} automatiquement
+                {result.toSort > 0 && <> · 📥 {result.toSort} à trier</>}
+                {result.duplicates > 0 && <> · {result.duplicates} déjà présente{result.duplicates > 1 ? 's' : ''} ignorée{result.duplicates > 1 ? 's' : ''}</>}
+              </div>
+              {result.toSort > 0 && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Trie-les en un clic : à chaque fois, l'appli te propose une règle pour que les prochains relevés soient triés tout seuls.</p>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {result.toSort > 0 && <Link to={`/depenses/categorie/__none?mois=${result.month}`}><Button variant="primary">📥 Trier les {result.toSort} opérations</Button></Link>}
+                <Link to={`/depenses?mois=${result.month}`}><Button>Voir mes dépenses par catégorie</Button></Link>
+                <Link to="/accueil"><Button variant="ghost">Tableau de bord</Button></Link>
+              </div>
+            </div>
+          )}
         </Card>
       )}
     </div>

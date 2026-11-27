@@ -5,20 +5,22 @@ export function normalizeLabel(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
 }
 
-export function ruleMatches(rule: CategoryRule, label: string): boolean {
+/** La règle s'applique-t-elle ? `amount` (centimes signés) permet de respecter le sens de la règle. */
+export function ruleMatches(rule: CategoryRule, label: string, amount?: number): boolean {
   const pattern = normalizeLabel(rule.pattern);
+  if (rule.direction && amount !== undefined && (rule.direction === 'in' ? amount <= 0 : amount >= 0)) return false;
   return pattern.length > 0 && normalizeLabel(label).includes(pattern);
 }
 
-/** Catégorie proposée par la première règle (par priorité croissante) qui correspond au libellé. */
-export function findCategoryForLabel(label: string, rules: CategoryRule[]): string | null {
+/** Catégorie proposée par la première règle (par priorité croissante) qui correspond au libellé (et au sens). */
+export function findCategoryForLabel(label: string, rules: CategoryRule[], amount?: number): string | null {
   const sorted = [...rules].sort((a, b) => a.priority - b.priority);
-  return sorted.find((r) => ruleMatches(r, label))?.categoryId ?? null;
+  return sorted.find((r) => ruleMatches(r, label, amount))?.categoryId ?? null;
 }
 
 /** Mots qui ne servent pas à identifier un commerçant dans un libellé bancaire. */
 const NOISE = new Set([
-  'CB', 'CARTE', 'PRLV', 'PRELEVEMENT', 'SEPA', 'VIR', 'VIREMENT', 'INST', 'RECU', 'EMIS', 'PAIEMENT', 'ACHAT',
+  'CB', 'CARTE', 'PERMANENT', 'VIR.PERMANENT', 'SUMUP', 'PRLV', 'PRELEVEMENT', 'SEPA', 'VIR', 'VIREMENT', 'INST', 'RECU', 'EMIS', 'PAIEMENT', 'ACHAT',
   'FACTURE', 'DU', 'DE', 'LE', 'LA', 'LES', 'DES', 'PAR', 'POUR', 'CHEZ', 'WEB', 'EUR', 'FR', 'SAS', 'SA', 'SARL', 'RETRAIT', 'DAB',
 ]);
 

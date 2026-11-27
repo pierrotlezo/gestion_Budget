@@ -12,6 +12,7 @@ export function RulesPage() {
   const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? '?';
   const [pattern, setPattern] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [direction, setDirection] = useState<'' | 'in' | 'out'>('');
   const [test, setTest] = useState('');
   const [message, setMessage] = useState('');
 
@@ -24,7 +25,7 @@ export function RulesPage() {
     await db.rules.bulkUpdate(order.map((x, j) => ({ key: x.id, changes: { priority: j * 10 } })));
   };
 
-  const tested = test ? findCategoryForLabel(test, rules) : undefined;
+  const tested = test ? findCategoryForLabel(test, rules) : undefined; // test sans montant : le sens n'est pas vérifié
 
   return (
     <div className="max-w-4xl">
@@ -53,7 +54,7 @@ export function RulesPage() {
             onSubmit={async (e) => {
               e.preventDefault();
               if (!pattern.trim() || !categoryId) return;
-              await createRule(pattern, categoryId);
+              await createRule(pattern, categoryId, direction || undefined);
               setPattern('');
             }}
           >
@@ -66,6 +67,13 @@ export function RulesPage() {
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
+              </Select>
+            </Field>
+            <Field label="S'applique aux">
+              <Select value={direction} onChange={(e) => setDirection(e.target.value as '' | 'in' | 'out')}>
+                <option value="">Entrées et sorties d'argent</option>
+                <option value="in">Entrées seulement (virements reçus…)</option>
+                <option value="out">Sorties seulement (paiements…)</option>
               </Select>
             </Field>
             <Button type="submit" variant="primary" disabled={!pattern.trim() || !categoryId}>Ajouter</Button>
@@ -83,6 +91,7 @@ export function RulesPage() {
             <tr>
               <th>Le libellé contient</th>
               <th>Catégorie</th>
+              <th>Sens</th>
               <th className="w-32"></th>
             </tr>
           </thead>
@@ -97,6 +106,13 @@ export function RulesPage() {
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
+                  </Select>
+                </td>
+                <td>
+                  <Select value={r.direction ?? ''} onChange={(e) => db.rules.update(r.id, { direction: (e.target.value || undefined) as 'in' | 'out' | undefined })} className="py-1!" aria-label="Sens">
+                    <option value="">⇅ Tous</option>
+                    <option value="in">⬇️ Entrées</option>
+                    <option value="out">⬆️ Sorties</option>
                   </Select>
                 </td>
                 <td className="whitespace-nowrap text-right">

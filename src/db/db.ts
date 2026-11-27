@@ -16,6 +16,7 @@ import type {
   Transaction,
 } from './schema';
 import {
+  commonRuleSet,
   CATEGORY_EXTRAS,
   defaultScenarios,
   investmentRuleSet,
@@ -97,10 +98,11 @@ export class BudgetDB extends Dexie {
         const rules = tx.table('rules');
         const existing = new Set((await rules.toArray()).map((r) => String(r.pattern).toUpperCase()));
         const first = (await rules.orderBy('priority').last())?.priority ?? 0;
+        // Identifiant = position dans la liste d'origine (le même que sur un nouvel appareil)
         await rules.bulkAdd(
           investmentRuleSet
-            .filter(([p]) => !existing.has(p))
-            .map(([pattern, categoryId], i) => ({ id: `rule-inv-${i}`, pattern, match: 'contains', categoryId, priority: first + (i + 1) * 10 })),
+            .map(([pattern, categoryId], i) => ({ id: `rule-inv-${i}`, pattern, match: 'contains', categoryId, priority: first + (i + 1) * 10 }))
+            .filter((r) => !existing.has(r.pattern)),
         );
         await tx.table('scenarios').bulkAdd(defaultScenarios);
       });
@@ -129,6 +131,18 @@ export class BudgetDB extends Dexie {
         if (!s.city) s.city = defaultSettings.city;
         if (!s.notifications) s.notifications = { ...defaultSettings.notifications };
       });
+    });
+
+    // Version 5 : règles pour les enseignes courantes (sans toucher aux règles existantes)
+    this.version(5).upgrade(async (tx) => {
+      const rules = tx.table('rules');
+      const existing = new Set((await rules.toArray()).map((r) => String(r.pattern).toUpperCase()));
+      const last = (await rules.orderBy('priority').last())?.priority ?? 0;
+      await rules.bulkAdd(
+        commonRuleSet
+          .map(([pattern, categoryId, direction], i) => ({ id: `rule-common-${i}`, pattern, match: 'contains', categoryId, priority: last + (i + 1) * 10, ...(direction ? { direction } : {}), updatedAt: 0 }))
+          .filter((r) => !existing.has(r.pattern)),
+      );
     });
 
     // Valeurs par défaut : horodatées 0, pour ne jamais écraser les données d'un autre appareil

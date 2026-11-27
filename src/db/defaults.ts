@@ -89,6 +89,50 @@ const ruleSet: [string, string][] = [
   ['LOYER', 'cat-loyer'],
 ];
 
+/**
+ * Enseignes et organismes courants (ajoutées en version 5). Le 3e élément facultatif limite la règle
+ * aux entrées (« in ») ou aux sorties (« out ») d'argent.
+ */
+export const commonRuleSet: [string, string, ('in' | 'out')?][] = [
+  ['IZLY', 'cat-alimentation'],
+  ['BURGER KING', 'cat-alimentation'],
+  ['MCDONALD', 'cat-alimentation'],
+  ['MC DONALD', 'cat-alimentation'],
+  ['KFC', 'cat-alimentation'],
+  ['SUSHI', 'cat-alimentation'],
+  ['DOMINOS', 'cat-alimentation'],
+  ['UBER EATS', 'cat-alimentation'],
+  ['DELIVEROO', 'cat-alimentation'],
+  ['BOULANGERIE', 'cat-alimentation'],
+  ['SPAR', 'cat-alimentation'],
+  ['COCCINELLE', 'cat-alimentation'],
+  ['GRAND FRAIS', 'cat-alimentation'],
+  ['BIOCOOP', 'cat-alimentation'],
+  ['AREAS', 'cat-alimentation'],
+  ['EFFIA', 'cat-transport'],
+  ['INDIGO', 'cat-transport'],
+  ['BLABLACAR', 'cat-transport'],
+  ['TOTAL ACCESS', 'cat-transport'],
+  ['ANTHROPIC', 'cat-abonnements'],
+  ['OPENAI', 'cat-abonnements'],
+  ['YOUTUBE', 'cat-abonnements'],
+  ['BETCLIC', 'cat-divertissement'],
+  ['WINAMAX', 'cat-divertissement'],
+  ['UNIBET', 'cat-divertissement'],
+  ['FDJ', 'cat-divertissement'],
+  ['HELLOASSO', 'cat-divertissement'],
+  ['HELLO ASSO', 'cat-divertissement'],
+  ['CINEMA', 'cat-divertissement'],
+  ['PATHE', 'cat-divertissement'],
+  ['STEAM', 'cat-divertissement'],
+  ['C.P.A.M', 'cat-autres-revenus', 'in'],
+  ['CPAM', 'cat-autres-revenus', 'in'],
+  ['ASSURANCE MOYEN DE PAIEMENT', 'cat-autre'],
+  ['COTISATION', 'cat-autre'],
+  ['FRAIS', 'cat-autre'],
+  ['ECHEANCE PRET', 'cat-autre'],
+];
+
 /** Virements vers des plateformes d'investissement → catégorie Épargne (ajoutées en version 2). */
 export const investmentRuleSet: [string, string][] = [
   ['TRADE REPUBLIC', 'cat-epargne'],
@@ -100,13 +144,15 @@ export const investmentRuleSet: [string, string][] = [
   ['YOMONI', 'cat-epargne'],
 ];
 
-export const defaultRules: CategoryRule[] = [...ruleSet, ...investmentRuleSet].map(([pattern, categoryId], i) => ({
-  id: `rule-${i}`,
-  pattern,
-  match: 'contains',
-  categoryId,
-  priority: i * 10,
-}));
+/**
+ * Identifiants identiques à ceux créés par les migrations (rule-inv-…, rule-common-…) :
+ * un nouvel appareil et un PC mis à jour au fil des versions ont ainsi les mêmes règles, sans doublon après synchro.
+ */
+export const defaultRules: CategoryRule[] = [
+  ...ruleSet.map(([p, c], i) => ({ id: `rule-${i}`, p, c, d: undefined as 'in' | 'out' | undefined })),
+  ...investmentRuleSet.map(([p, c], i) => ({ id: `rule-inv-${i}`, p, c, d: undefined })),
+  ...commonRuleSet.map(([p, c, d], i) => ({ id: `rule-common-${i}`, p, c, d })),
+].map(({ id, p, c, d }, i) => ({ id, pattern: p, match: 'contains' as const, categoryId: c, priority: i * 10, ...(d ? { direction: d } : {}) }));
 
 export const defaultLoan: Loan = {
   id: DEFAULT_LOAN_ID,

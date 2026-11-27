@@ -8,6 +8,9 @@ import { Button, EmptyState, Input, Select } from '../../components/ui';
 import { TransactionForm } from './TransactionForm';
 import { TransactionRows } from './TransactionRows';
 import { useRuleSuggestion } from './RuleSuggestion';
+import { saveFile } from '../../services/download';
+import { transactionsToCsv } from '../../domain/csv/exportTransactions';
+import { todayISO } from '../../domain/dates';
 
 const PAGE = 150;
 
@@ -48,7 +51,15 @@ export function TransactionsPage() {
           <option value="__none">❔ À trier</option>
           {categories.map((c) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
         </Select>
-        <Button variant="primary" className="ml-auto" onClick={() => setEditing('new')}>+ Ajouter</Button>
+        <Button
+          className="ml-auto"
+          disabled={filtered.length === 0}
+          title="Exporter les opérations affichées (avec les filtres en cours)"
+          onClick={() => saveFile(`operations-${month || 'toutes'}-${todayISO()}.csv`, transactionsToCsv(filtered, categories), 'text/csv;charset=utf-8')}
+        >
+          📄 Exporter
+        </Button>
+        <Button variant="primary" onClick={() => setEditing('new')}>+ Ajouter</Button>
       </div>
 
       {transactions && filtered.length === 0 ? (

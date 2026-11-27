@@ -30,7 +30,7 @@ export function generateDemoTransactions(today: ISODate, rules: CategoryRule[]):
     const add = (d: number, label: string, amount: number, categoryId?: string | null) => {
       const date = day(d);
       if (date > today) return;
-      out.push({ date, label, amount, categoryId: categoryId === undefined ? findCategoryForLabel(label, rules) : categoryId, source: 'csv', isDemo: true });
+      out.push({ date, label, amount, categoryId: categoryId === undefined ? findCategoryForLabel(label, rules, amount) : categoryId, source: 'csv', isDemo: true });
     };
 
     add(1, 'VIR INST LIVRET A', 60000, 'cat-virement-livret');
